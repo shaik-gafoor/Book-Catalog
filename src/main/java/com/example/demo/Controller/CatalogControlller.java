@@ -22,4 +22,9 @@ public class CatalogControlller {
         Catalog createdCatalog = catalogService.createCatalog(catalog);
         return ResponseEntity.ok(createdCatalog);
     }
+
+    @PostMapping("add/{id}")
+    public ResponseEntity<Catalog> addBookById(){
+        return null;
+    }
 }
