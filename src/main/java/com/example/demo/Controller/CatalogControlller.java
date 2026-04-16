@@ -3,6 +3,7 @@ package com.example.demo.Controller;
 import com.example.demo.Services.CatalogService;
 import com.example.demo.model.Catalog;
 
+import com.example.demo.payload.dto.CatalogDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,13 +19,11 @@ public class CatalogControlller {
     private final CatalogService catalogService;
 
     @PostMapping("/create")
-    public ResponseEntity<Catalog> addcatalog(@RequestBody Catalog catalog){
-        Catalog createdCatalog = catalogService.createCatalog(catalog);
+    public ResponseEntity<CatalogDTO> addcatalog(@RequestBody CatalogDTO catalog){
+        CatalogDTO createdCatalog = catalogService.createCatalog(catalog);
         return ResponseEntity.ok(createdCatalog);
+       
     }
 
-    @PostMapping("add/{id}")
-    public ResponseEntity<Catalog> addBookById(){
-        return null;
-    }
+
 }
