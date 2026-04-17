@@ -1,6 +1,7 @@
 package com.example.demo.Services.impl;
 
 import com.example.demo.Services.CatalogService;
+import com.example.demo.mapper.CatalogMapper;
 import com.example.demo.model.Catalog;
 import com.example.demo.payload.dto.CatalogDTO;
 import com.example.demo.repository.CatalogRepository;
@@ -35,27 +36,7 @@ public class CatalogServiceimpl implements CatalogService {
         }
         Catalog savedCatalog = catalogRepository.save(catalog);
 
-        CatalogDTO dto = CatalogDTO.builder()
-                .id(savedCatalog.getId())
-                .code(savedCatalog.getCode())
-                .name(savedCatalog.getName())
-                .description(savedCatalog.getDescription())
-                .displayOrder(savedCatalog.getDisplayOrder())
-                .active(savedCatalog.getActive())
-                .createdAt(savedCatalog.getCreatedAt())
-                .updatedAt(savedCatalog.getUpdatedAt())
-                .build();
-
-        if(savedCatalog.getParentCatalog()!=null){
-            dto.setParentCatalogId(savedCatalog.getParentCatalog().getId());
-            dto.setParentCatalogName(savedCatalog.getParentCatalog().getName());
-        }
-
-//        dto.setSubCatalog(savedCatalog.getSubCatalogs().stream()
-//                .filter(subCatalog -> subCatalog.getActive())
-//                .map(subCatalog ->));
-
-//        dto.setBookCount((long)(savedCatalog.getB));
+        CatalogDTO dto = CatalogMapper.toDTO(savedCatalog);
 
         return dto;
     }
