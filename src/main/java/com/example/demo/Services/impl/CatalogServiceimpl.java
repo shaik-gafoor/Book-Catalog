@@ -9,6 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class CatalogServiceimpl implements CatalogService {
@@ -39,5 +42,13 @@ public class CatalogServiceimpl implements CatalogService {
         CatalogDTO dto = CatalogMapper.toDTO(savedCatalog);
 
         return dto;
+
+    }
+
+    @Override
+    public List<CatalogDTO> getAllCatalog() {
+        return catalogRepository.findAll().stream()
+                .map(CatalogMapper::toDTO)
+                .collect(Collectors.toList());
     }
 }
