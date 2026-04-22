@@ -20,7 +20,7 @@ public interface CatalogRepository extends JpaRepository<Catalog, Long> {
     long countByActiveTrue();
 
 
-    @Query("select count(b) from book b where b.catalog.id=:catalogId")
-    long countBooksByCatalog(@Param("catalogId") Long catalogId);
+//    @Query("select count(b) from book b where b.catalog.id=:catalogId")
+//    long countBooksByCatalog(@Param("catalogId") Long catalogId);
 
 }

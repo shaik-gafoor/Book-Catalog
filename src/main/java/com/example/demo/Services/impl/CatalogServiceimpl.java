@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import javax.xml.catalog.CatalogException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,8 +41,11 @@ public class CatalogServiceimpl implements CatalogService {
     }
 
     @Override
-    public CatalogDTO getCatslogById(Long catalogId) {
-        return null;
+    public CatalogDTO getCatalogById(Long catalogId) {
+        Catalog catalog = catalogRepository.findById(catalogId).orElseThrow(
+                ()-> new CatalogException("catalog not found")
+        );
+        return catalogMapper.toDTO(catalog);
     }
 
     @Override

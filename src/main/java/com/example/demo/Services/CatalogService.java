@@ -1,5 +1,6 @@
 package com.example.demo.Services;
 
+import com.example.demo.exception.CatalogException;
 import com.example.demo.model.Catalog;
 import com.example.demo.payload.dto.CatalogDTO;
 import org.springframework.data.domain.Page;
@@ -13,7 +14,7 @@ public interface CatalogService {
 
     List<CatalogDTO>  getAllCatalog();
 
-    CatalogDTO getCatslogById(Long catalogId);
+    CatalogDTO getCatalogById(Long catalogId) throws CatalogException;
 
     CatalogDTO updateCatalog(Long catalogId, CatalogDTO catalog);
 
