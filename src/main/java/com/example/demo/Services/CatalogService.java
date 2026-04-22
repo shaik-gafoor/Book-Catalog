@@ -16,7 +16,7 @@ public interface CatalogService {
 
     CatalogDTO getCatalogById(Long catalogId) throws CatalogException;
 
-    CatalogDTO updateCatalog(Long catalogId, CatalogDTO catalog);
+    CatalogDTO updateCatalog(Long catalogId, CatalogDTO catalog) throws CatalogException;
 
     CatalogDTO deleteCatalog(Long catalogId);
 

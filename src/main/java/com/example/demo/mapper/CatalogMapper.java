@@ -68,4 +68,19 @@ public class CatalogMapper {
         return catalog;
 
     }
+
+    public void updateEntityFromDTO(CatalogDTO dto, Catalog existingCatalog){
+        if(dto == null || existingCatalog == null){
+            return ;
+        }
+
+        existingCatalog.setCode(dto.getCode());
+        existingCatalog.setName(dto.getName());
+        existingCatalog.setDescription(dto.getDescription());
+        existingCatalog.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : 0);
+        if(dto.getActive() != null){
+            catalogRepository.findById(dto.getParentCatalogId())
+                    .ifPresent(existingCatalog::setParentCatalog);
+        }
+    }
 }

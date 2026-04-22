@@ -49,8 +49,16 @@ public class CatalogServiceimpl implements CatalogService {
     }
 
     @Override
-    public CatalogDTO updateCatalog(Long catalogId, CatalogDTO catalog) {
-        return null;
+    public CatalogDTO updateCatalog(Long catalogId, CatalogDTO catalogDTO) {
+
+        Catalog existingCatalog = catalogRepository.findById(catalogId).orElseThrow(
+                ()->new CatalogException("catalog not found")
+        );
+
+        catalogMapper.updateEntityFromDTO(catalogDTO, existingCatalog);
+
+        Catalog updatedCatalog = catalogRepository.save(existingCatalog);
+        return catalogMapper.toDTO(updatedCatalog);
     }
 
     @Override
