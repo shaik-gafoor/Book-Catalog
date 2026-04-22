@@ -1,5 +1,6 @@
 package com.example.demo.payload.dto;
 
+import com.example.demo.model.Catalog;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -9,10 +10,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Setter
 public class CatalogDTO {
     private Long id;
 
@@ -41,4 +42,8 @@ public class CatalogDTO {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    private String parentCatalog;
+
+
 }

@@ -7,6 +7,8 @@ import com.example.demo.payload.dto.CatalogDTO;
 import com.example.demo.repository.CatalogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,37 +20,67 @@ public class CatalogServiceimpl implements CatalogService {
 
     @Autowired
     private  CatalogRepository catalogRepository;
+    private final CatalogMapper catalogMapper;
 
     @Override
     public CatalogDTO createCatalog(CatalogDTO catalogDTO){
-//        return catalogRepository.save(catalogDTO);
 
-
-
-        Catalog catalog = Catalog.builder()
-                .code(catalogDTO.getCode())
-                .name(catalogDTO.getName())
-                .description(catalogDTO.getDescription())
-                .displayOrder(catalogDTO.getDisplayOrder())
-                .active(true)
-                .build();
-
-        if(catalogDTO.getParentCatalogId()!=null){
-            Catalog parentCatalog = catalogRepository.findById(catalogDTO.getParentCatalogId()).get();
-            catalog.setParentCatalog(parentCatalog);
-        }
+        Catalog catalog = catalogMapper.toEntity(catalogDTO);
         Catalog savedCatalog = catalogRepository.save(catalog);
 
-        CatalogDTO dto = CatalogMapper.toDTO(savedCatalog);
-
-        return dto;
+        return catalogMapper.toDTO(savedCatalog);
 
     }
 
     @Override
     public List<CatalogDTO> getAllCatalog() {
         return catalogRepository.findAll().stream()
-                .map(CatalogMapper::toDTO)
+                .map(catalogMapper::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public CatalogDTO getCatslogById(Long catalogId) {
+        return null;
+    }
+
+    @Override
+    public CatalogDTO updateCatalog(Long catalogId, CatalogDTO catalog) {
+        return null;
+    }
+
+    @Override
+    public CatalogDTO deleteCatalog(Long catalogId) {
+        return null;
+    }
+
+    @Override
+    public CatalogDTO hardDeleteCatalog(Long catalogId) {
+        return null;
+    }
+
+    @Override
+    public List<CatalogDTO> getAllActiveCatalogWithSubCatalogs() {
+        return List.of();
+    }
+
+    @Override
+    public List<CatalogDTO> getTopLevelCatalog() {
+        return List.of();
+    }
+
+    @Override
+    public Page<CatalogDTO> searchCatalog(String searchTerm, Pageable pageable) {
+        return null;
+    }
+
+    @Override
+    public long getTotalActiveCatalog() {
+        return 0;
+    }
+
+    @Override
+    public long getBookCountByCatalog(Long catalogId) {
+        return 0;
     }
 }

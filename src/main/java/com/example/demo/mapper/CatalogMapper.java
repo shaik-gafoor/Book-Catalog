@@ -1,13 +1,20 @@
 package com.example.demo.mapper;
-
 import com.example.demo.model.Catalog;
 import com.example.demo.payload.dto.CatalogDTO;
+import com.example.demo.repository.CatalogRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 import java.util.stream.Collectors;
 
+@Component
+@RequiredArgsConstructor
+
 public class CatalogMapper {
 
-    public static CatalogDTO toDTO(Catalog savedCatalog){
+    private final CatalogRepository catalogRepository;
+
+    public  CatalogDTO toDTO(Catalog savedCatalog){
         if(savedCatalog == null){
             return null;
         }
@@ -24,6 +31,7 @@ public class CatalogMapper {
                 .build();
 
         if(savedCatalog.getParentCatalog()!=null){
+
             dto.setParentCatalogId(savedCatalog.getParentCatalog().getId());
             dto.setParentCatalogName(savedCatalog.getParentCatalog().getName());
         }
@@ -37,5 +45,27 @@ public class CatalogMapper {
 
 //        dto.setBookCount((long)(savedCatalog.getB));
         return dto;
+    }
+
+    public Catalog toEntity(CatalogDTO catalogDTO) {
+        if (catalogDTO == null) {
+            return null;
+        }
+
+        Catalog catalog = Catalog.builder()
+                .code(catalogDTO.getCode())
+                .name(catalogDTO.getName())
+                .description(catalogDTO.getDescription())
+                .displayOrder(catalogDTO.getDisplayOrder())
+                .active(true)
+                .build();
+
+        if (catalogDTO.getParentCatalogId() != null) {
+            catalogRepository.findById(catalogDTO.getParentCatalogId())
+                    .ifPresent(parentCatalog -> catalog.setParentCatalog(parentCatalog));
+        }
+
+        return catalog;
+
     }
 }
