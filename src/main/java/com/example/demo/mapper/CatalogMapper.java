@@ -5,6 +5,7 @@ import com.example.demo.repository.CatalogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
@@ -82,5 +83,9 @@ public class CatalogMapper {
             catalogRepository.findById(dto.getParentCatalogId())
                     .ifPresent(existingCatalog::setParentCatalog);
         }
+    }
+
+    public List<CatalogDTO> toDTOList(List<Catalog> catalogList){
+        return catalogList.stream().map(catalog -> toDTO(catalog)).collect(Collectors.toList());
     }
 }

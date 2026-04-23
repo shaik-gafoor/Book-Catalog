@@ -18,9 +18,9 @@ public interface CatalogService {
 
     CatalogDTO updateCatalog(Long catalogId, CatalogDTO catalog) throws CatalogException;
 
-    CatalogDTO deleteCatalog(Long catalogId);
+    CatalogDTO deleteCatalog(Long catalogId) throws CatalogException;
 
-    CatalogDTO hardDeleteCatalog(Long catalogId);
+    CatalogDTO hardDeleteCatalog(Long catalogId) throws CatalogException;
 
     List<CatalogDTO> getAllActiveCatalogWithSubCatalogs();
 

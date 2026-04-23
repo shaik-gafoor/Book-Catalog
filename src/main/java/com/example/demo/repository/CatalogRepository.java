@@ -11,7 +11,7 @@ public interface CatalogRepository extends JpaRepository<Catalog, Long> {
 
     List<Catalog> findByActiveTrueOrderByDisplayOrderAsc();
 
-    List<Catalog>findByParentCatalogIsNullActiveTrueOrderByDisplayOrderAsc();
+    List<Catalog> findByParentCatalogIsNullAndActiveTrueOrderByDisplayOrderAsc();
 
     List<Catalog>findByParentCatalogIdAndActiveTrueOrderByDisplayOrderAsc(
         Long parentCatalogId

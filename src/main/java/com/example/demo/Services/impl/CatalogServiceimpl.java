@@ -11,7 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import javax.xml.catalog.CatalogException;
+import com.example.demo.exception.CatalogException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,7 +41,7 @@ public class CatalogServiceimpl implements CatalogService {
     }
 
     @Override
-    public CatalogDTO getCatalogById(Long catalogId) {
+    public CatalogDTO getCatalogById(Long catalogId) throws CatalogException {
         Catalog catalog = catalogRepository.findById(catalogId).orElseThrow(
                 ()-> new CatalogException("catalog not found")
         );
@@ -49,36 +49,48 @@ public class CatalogServiceimpl implements CatalogService {
     }
 
     @Override
-    public CatalogDTO updateCatalog(Long catalogId, CatalogDTO catalogDTO) {
+    public CatalogDTO updateCatalog(Long catalogId, CatalogDTO catalogDTO) throws CatalogException {
 
         Catalog existingCatalog = catalogRepository.findById(catalogId).orElseThrow(
                 ()->new CatalogException("catalog not found")
         );
 
         catalogMapper.updateEntityFromDTO(catalogDTO, existingCatalog);
-
         Catalog updatedCatalog = catalogRepository.save(existingCatalog);
         return catalogMapper.toDTO(updatedCatalog);
     }
 
     @Override
-    public CatalogDTO deleteCatalog(Long catalogId) {
+    public CatalogDTO deleteCatalog(Long catalogId) throws CatalogException {
+        Catalog existingCatalog = catalogRepository.findById(catalogId).orElseThrow(
+                ()->new CatalogException("catalog not found")
+        );
+        existingCatalog.setActive(false);
+        catalogRepository.save(existingCatalog);
         return null;
     }
 
     @Override
-    public CatalogDTO hardDeleteCatalog(Long catalogId) {
+    public CatalogDTO hardDeleteCatalog(Long catalogId) throws CatalogException {
+        Catalog existingCatalog = catalogRepository.findById(catalogId).orElseThrow(
+                ()->new CatalogException("catalog not found")
+        );
+        catalogRepository.delete(existingCatalog);
         return null;
     }
 
     @Override
     public List<CatalogDTO> getAllActiveCatalogWithSubCatalogs() {
-        return List.of();
+        List<Catalog> topLevelCatalogs = catalogRepository
+                .findByParentCatalogIsNullAndActiveTrueOrderByDisplayOrderAsc();
+        return catalogMapper.toDTOList(topLevelCatalogs);
     }
 
     @Override
     public List<CatalogDTO> getTopLevelCatalog() {
-        return List.of();
+        List<Catalog> topLevelCatalogs = catalogRepository
+                .findByParentCatalogIsNullAndActiveTrueOrderByDisplayOrderAsc();
+        return catalogMapper.toDTOList(topLevelCatalogs);
     }
 
     @Override
@@ -88,7 +100,7 @@ public class CatalogServiceimpl implements CatalogService {
 
     @Override
     public long getTotalActiveCatalog() {
-        return 0;
+        return catalogRepository.countByActiveTrue();
     }
 
     @Override
