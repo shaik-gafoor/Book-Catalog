@@ -75,4 +75,7 @@ public class BookDTO {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    public String setAuthor() {
+    }
 }
