@@ -14,9 +14,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +24,7 @@ public class BookServiceImpl implements BookService {
 
     private final BookRepository bookRepository;
     private final BookMapper bookMapper;
+
 
 
     @Override
@@ -104,17 +105,17 @@ public class BookServiceImpl implements BookService {
                 searchRequest.getAvailableOnly(),
                 pageable
         );
-        return null;
+        return convertToPageResponse(bookPage);
     }
 
     @Override
     public long getTotalActiveBooks() {
-        return 0;
+        return bookRepository.countByActiveTrue();
     }
 
     @Override
     public long getTotalAvailailableBooks() {
-        return 0;
+        return bookRepository.countAvailableBooks();
     }
 
     private Pageable createPageable(int page, int size, String sortBy, String sortDirection){
@@ -124,5 +125,19 @@ public class BookServiceImpl implements BookService {
         Sort sort = sortDirection.equalsIgnoreCase("ASC")
                 ?Sort.by(sortBy).ascending():Sort.by(sortBy).descending();
         return PageRequest.of(page,size,sort);
+    }
+
+    private  pageResponse<BookDTO> convertToPageResponse(Page<Book> books){
+        List<BookDTO> bookDTOS = books.getContent()
+                .stream().map(bookMapper::toDTO).collect(Collectors.toList());
+
+        return new pageResponse<>(bookDTOS,
+                books.getNumber(),
+                books.getSize(),
+                books.getTotalElements(),
+                books.getTotalPages(),
+                books.isLast(),
+                books.isFirst(),
+                books.isEmpty());
     }
 }

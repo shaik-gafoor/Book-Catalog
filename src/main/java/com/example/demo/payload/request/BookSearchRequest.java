@@ -42,4 +42,22 @@ public class BookSearchRequest {
     public int getPage() {
         return 0;
     }
+
+    public void setCatalogId(Long catalogId) {
+    }
+
+    public void setSortDirection(String sortDirection) {
+    }
+
+    public void setSortBy(String sortBy) {
+    }
+
+    public void setPage(int page) {
+    }
+
+    public void setSize(int size) {
+    }
+
+    public void setAvailableOnly(Boolean availableOnly) {
+    }
 }

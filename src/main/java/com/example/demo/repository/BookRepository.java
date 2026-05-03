@@ -21,12 +21,12 @@ public interface  BookRepository extends JpaRepository<Book, Long> {
 
 
     @Query("select b from book b where "
-            + ":searchTerm is null OR"
+            + "(:searchTerm is null OR"
             + "lower(b.title) like lower(concat ('%', :searchterm, '%')) OR"
             + "lower(b.author) like lower(concat ('%', :searchterm, '%')) OR"
-            + "lower(b.isbn) like lower(concat ('%', :searchterm, '%')) OR"
+            + "lower(b.isbn) like lower(concat ('%', :searchterm, '%'))) AND"
             +"(:catalogId is null or b.catalog.id =:catalogId) AND "
-            +"(availableOnly == false Or b.availableCopies > 0) AND"
+            +"(availableOnly = false Or b.availableCopies > 0) AND"
             + "b.active = true"
     )
     Page<Book> searchBooksWithFilters(
