@@ -36,12 +36,13 @@ public class BookController {
     }
 
 
-    public ResponseEntity<BookDTO> getBookById(@PathVariable Long id) throws BookException, ExecutionControl.UserException{
+    @GetMapping("/{id}")
+    public ResponseEntity<BookDTO> getBookById(@PathVariable Long id) throws BookException {
         BookDTO book = bookService.getBookById(id);
         return ResponseEntity.ok(book);
     }
 
-    @PutMapping("/{id")
+    @PutMapping("/{id}")
     public ResponseEntity<BookDTO> updateBook(@PathVariable Long id, @RequestBody BookDTO bookDTO) throws BookException {
             BookDTO updatedBook = bookService.updateBook(id, bookDTO);
             return ResponseEntity.ok(updatedBook);
