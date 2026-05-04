@@ -1,7 +1,13 @@
 package com.example.demo.model;
 
+import com.example.demo.domain.AuthProvider;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.cglib.core.Local;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -22,5 +28,21 @@ public class User {
 
     private String role;
 
+    private String phone;
+
+    private AuthProvider authProvider = AuthProvider.LOCAL;
+
+    private String googleId;
+
+    private String profileImage;
+
     private String password;
+
+    private LocalDateTime lastLogin;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 }
