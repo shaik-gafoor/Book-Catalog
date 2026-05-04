@@ -1,36 +1,50 @@
 package com.example.demo.Services.impl;
 
 import com.example.demo.Services.AuthService;
+import com.example.demo.Services.EmailService;
 import com.example.demo.configrations.JwtProvider;
 import com.example.demo.domain.UserRole;
 import com.example.demo.exception.UserException;
 import com.example.demo.mapper.UserMapper;
+import com.example.demo.model.PasswordResetToken;
 import com.example.demo.model.User;
 import com.example.demo.payload.dto.UserDTO;
 import com.example.demo.payload.response.AuthResponse;
+import com.example.demo.repository.PasswordResetTokenRepository;
 import com.example.demo.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.beans.Transient;
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 
 public class AuthServiceImpl implements AuthService {
+
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final UserMapper userMapper;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final CustomUserServiceImplementation customUserServiceImplementation;
+    private final EmailService emailService;
+
+
     @Override
-    public AuthResponse login(String username, String password) {
+    public AuthResponse login(String username, String password) throws UserException {
         Authentication authentication = authenticate(username,password);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 //        Collection<? extends GrantedAuthority>authorities = authentication.getAuthorities();
@@ -50,8 +64,15 @@ public class AuthServiceImpl implements AuthService {
         return response;
     }
 
-    private Authentication authenticate(String username, String password) {
-        return null;
+    private Authentication authenticate(String username, String password) throws UserException {
+        UserDetails userDetails = customUserServiceImplementation.loadUserByUsername(username);
+        if(userDetails == null){
+            throw new UserException("user not found with email - "+password);
+        }
+        if(!passwordEncoder.matches(password,userDetails.getPassword())){
+            throw new UserException("password not match");
+        }
+        return new UsernamePasswordAuthenticationToken(username,null,userDetails.getAuthorities());
     }
 
 
@@ -87,13 +108,32 @@ public class AuthServiceImpl implements AuthService {
 
 
 
-    @Override
-    public void createPasswordResetToken(String email) {
+    @Transactional
+    public void createPasswordResetToken(String email) throws UserException {
+
+        String frontendUrl="";
+        User user = userRepository.findByEmail(email);
+        if(user ==  null){
+            throw new UserException("user not found with given email");
+        }
+        String token = UUID.randomUUID().toString();
+
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .token(token)
+                .user(user)
+                .expiryDate(LocalDateTime.now().plusMinutes(5))
+                .build();
+        passwordResetTokenRepository.save(resetToken);
+        String resetLink = frontendUrl + token;
+        String subject = "Password Reset Request";
+        String body ="You requested to reset your password.Use this link(valid 5 minutes):" + resetLink;
+        emailService.sendEmail(user.getEmail(),subject,body);
+
     }
 
 
 
-    @Override
+    @Transactional
     public void resetPassword(String token, String newPassword) {
 
     }
