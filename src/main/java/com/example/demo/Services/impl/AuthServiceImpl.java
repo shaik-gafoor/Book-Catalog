@@ -37,7 +37,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
-    private final UserMapper userMapper;
+
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final CustomUserServiceImplementation customUserServiceImplementation;
     private final EmailService emailService;
@@ -80,7 +80,7 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse signup(UserDTO req) throws UserException {
         User user = userRepository.findByEmail(req.getEmail());
 
-        if(user == null){
+        if(user != null){
             throw new UserException("Email id already registed");
         }
         User createdUser = new User();
