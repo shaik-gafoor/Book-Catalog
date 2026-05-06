@@ -134,7 +134,19 @@ public class AuthServiceImpl implements AuthService {
 
 
     @Transactional
-    public void resetPassword(String token, String newPassword) {
+    public void resetPassword(String token, String newPassword) throws Exception {
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token).orElseThrow(
+                ()-> new Exception("token not valid")
+        );
+        if(resetToken.isExpired()){
+            passwordResetTokenRepository.delete(resetToken);
+            throw new Exception("token expired");
+        }
+
+        User user = resetToken.getUser();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        passwordResetTokenRepository.delete(resetToken);
 
     }
 }
