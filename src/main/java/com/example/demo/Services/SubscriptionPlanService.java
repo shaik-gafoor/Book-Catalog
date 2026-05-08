@@ -8,7 +8,7 @@ public interface SubscriptionPlanService {
 
     SubscriptionPlanDTO createSubscriptionPlan(SubscriptionPlanDTO planDTO) throws Exception;
 
-    SubscriptionPlanDTO updateSubscriptionPlan(Long planId, SubscriptionPlanDTO planDTO);
+    SubscriptionPlanDTO updateSubscriptionPlan(Long planId, SubscriptionPlanDTO planDTO) throws Exception;
 
     void deleteSubscriptionPlan(Long planId);
 

@@ -34,8 +34,15 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
     }
 
     @Override
-    public SubscriptionPlanDTO updateSubscriptionPlan(Long planId, SubscriptionPlanDTO planDTO) {
-        return null;
+    public SubscriptionPlanDTO updateSubscriptionPlan(Long planId, SubscriptionPlanDTO planDTO) throws Exception {
+        SubscriptionPlan existingPlan = planRepository.findById(planId).orElseThrow(
+                ()->new Exception("plan not found!")
+        );
+        planMapper.updateEntity(existingPlan,planDTO);
+        User currentUser = userService.getCurrentUser();
+        existingPlan.setUpdatedBy(currentUser.getFullName());
+        SubscriptionPlan updatedPlan = planRepository.save(existingPlan);
+        return planMapper.toDTO(updatedPlan);
     }
 
     @Override
