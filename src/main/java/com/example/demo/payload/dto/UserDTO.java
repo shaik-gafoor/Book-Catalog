@@ -1,6 +1,7 @@
 package com.example.demo.payload.dto;
 
 import com.example.demo.domain.UserRole;
+import com.example.demo.model.User;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -11,7 +12,7 @@ import java.time.LocalDateTime;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserDTO {
+public class UserDTO extends User {
     private Long id;
 
     @NotNull(message = "email is required")
