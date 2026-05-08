@@ -10,7 +10,7 @@ public interface SubscriptionPlanService {
 
     SubscriptionPlanDTO updateSubscriptionPlan(Long planId, SubscriptionPlanDTO planDTO) throws Exception;
 
-    void deleteSubscriptionPlan(Long planId);
+    void deleteSubscriptionPlan(Long planId) throws Exception;
 
     List<SubscriptionPlanDTO> getAllSubscriptionPlan();
 

@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserDTO extends User {
+public class UserDTO  {
     private Long id;
 
     @NotNull(message = "email is required")
