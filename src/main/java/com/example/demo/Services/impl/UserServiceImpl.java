@@ -21,7 +21,7 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    public UserDTO getCurrentUser() throws Exception {
+    public User getCurrentUser() throws Exception {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email);
         if(user == null){

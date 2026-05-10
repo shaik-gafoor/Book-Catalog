@@ -56,4 +56,7 @@ public class Payment {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    public void setCompletedeAt(LocalDateTime now) {
+    }
 }

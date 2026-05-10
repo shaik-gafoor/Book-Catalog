@@ -4,6 +4,7 @@ import com.example.demo.Services.PaymentService;
 import com.example.demo.Services.RazorpayService;
 import com.example.demo.domain.PaymentGateway;
 import com.example.demo.domain.PaymentStatus;
+import com.example.demo.event.publisher.PaymentEventPublisher;
 import com.example.demo.mapper.PaymentMapper;
 import com.example.demo.model.Payment;
 import com.example.demo.model.Subscription;
@@ -17,6 +18,7 @@ import com.example.demo.repository.PaymentRepository;
 import com.example.demo.repository.SubscriptionRepository;
 import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.json.JSONObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final RazorpayService razorpayService;
     private final PaymentMapper paymentMapper;
+    private final PaymentEventPublisher paymentEventPublisher;
     @Override
     public PaymentInitiateResponse initiatePayment(PaymentInitiateRequest request) throws Exception {
         User user = userRepository.findById(request.getUserId()).get();
@@ -78,8 +81,37 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public PaymentDTO verifyPayment(PaymentVerifyRequest req) {
-        return null;
+    public PaymentDTO verifyPayment(PaymentVerifyRequest req) throws Exception {
+        JSONObject paymentDetails = razorpayService.fetchPaymentDetails(
+                req.getRazorpayPaymentId()
+        );
+
+        JSONObject notes = paymentDetails.getJSONObject("notes");
+
+// Access specific fields inside 'notes'
+        Long paymentId = Long.parseLong(notes.optString("payment_id"));
+
+        Payment payment = paymentRepository.findById(paymentId).get();
+
+        boolean isValid = razorpayService.isValidPayment(req.getRazorpayPaymentId());
+
+        if (PaymentGateway.RAZORPAY == payment.getGateway()) {
+            if (isValid) {
+                payment.setGatewayOrderId(req.getRazorpayPaymentId());
+            }
+        }
+
+        if (isValid) {
+            payment.setStatus(PaymentStatus.SUCCESS);
+            payment.setCompletedeAt(LocalDateTime.now());
+            payment = paymentRepository.save(payment);
+
+            //----------------------------------------------------------
+            paymentEventPublisher.publishPaymentSuccessEvent(payment);
+
+        }
+
+        return paymentMapper.toDTO(payment);
     }
 
     @Override

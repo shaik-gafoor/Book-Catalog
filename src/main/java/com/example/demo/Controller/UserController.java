@@ -1,6 +1,7 @@
 package com.example.demo.Controller;
 
 import com.example.demo.Services.UserService;
+import com.example.demo.model.User;
 import com.example.demo.payload.dto.UserDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +26,7 @@ public class UserController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<List<UserDTO>> getUserProfile() throws Exception {
+    public ResponseEntity<List<User>> getUserProfile() throws Exception {
         return ResponseEntity.ok(Collections.singletonList(userService.getCurrentUser()));
     }
 }

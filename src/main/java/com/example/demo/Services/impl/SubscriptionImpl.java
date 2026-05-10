@@ -1,7 +1,10 @@
 package com.example.demo.Services.impl;
 
+import com.example.demo.Services.PaymentService;
 import com.example.demo.Services.SubscriptionService;
 import com.example.demo.Services.UserService;
+import com.example.demo.domain.PaymentGateway;
+import com.example.demo.domain.PaymentType;
 import com.example.demo.exception.SubscriptionException;
 import com.example.demo.mapper.SubscriptionMapper;
 import com.example.demo.model.Subscription;
@@ -9,6 +12,8 @@ import com.example.demo.model.SubscriptionPlan;
 import com.example.demo.model.User;
 import com.example.demo.payload.dto.SubscriptionDTO;
 import com.example.demo.payload.dto.UserDTO;
+import com.example.demo.payload.request.PaymentInitiateRequest;
+import com.example.demo.payload.response.PaymentInitiateResponse;
 import com.example.demo.repository.SubscriptionPlanRepository;
 import com.example.demo.repository.SubscriptionRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +27,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class SubscriptionImpl implements SubscriptionService {
+
+    private final PaymentService paymentService;
     @Override
     public void deactivateExpiredSubscriptions() throws Exception {
         List<Subscription> expiredSubscriptions = subscriptionRepository
@@ -39,9 +46,9 @@ public class SubscriptionImpl implements SubscriptionService {
     private final UserService userService;
 
     @Override
-    public SubscriptionDTO subscribe(SubscriptionDTO subscriptionDTO) throws Exception {
+    public PaymentInitiateResponse subscribe(SubscriptionDTO subscriptionDTO) throws Exception {
 
-        UserDTO user = userService.getCurrentUser();
+        User user = userService.getCurrentUser();
 
         SubscriptionPlan plan =subscriptionPlanRepository
                 .findById(subscriptionDTO.getPlanId())
@@ -49,18 +56,28 @@ public class SubscriptionImpl implements SubscriptionService {
 
 // Optional<Sub>
 
-        Subscription subscription = subscriptionMapper.toEntity(subscriptionDTO);
+        Subscription subscription = subscriptionMapper.toEntity(subscriptionDTO,plan,user);
         subscription.initializeFromPlan();
         subscription.setIsActive(false);
         Subscription savedSubscription = subscriptionRepository.save(subscription);
 // create payment (todo)
 
-        return subscriptionMapper.toDTO(savedSubscription);
+
+        PaymentInitiateRequest paymentInitiateRequest = PaymentInitiateRequest
+                .builder()
+                .userId(user.getId())
+                .subscriptionId(subscription.getId())
+                .paymentType(PaymentType.MEMBERSHIP)
+                .gateway(PaymentGateway.RAZORPAY)
+                .amount(subscription.getPrice())
+                .description("Library Subscription - " + plan.getName())
+                .build();
+         return paymentService.initiatePayment(paymentInitiateRequest);
     }
 
     @Override
     public SubscriptionDTO getUsersActiveSubscription(Long userId) throws Exception {
-        UserDTO user = userService.getCurrentUser();
+        User user = userService.getCurrentUser();
 
         Subscription subscription = subscriptionRepository
                 .findActiveSubscriptionByUserId(user.getId(), LocalDate.now())

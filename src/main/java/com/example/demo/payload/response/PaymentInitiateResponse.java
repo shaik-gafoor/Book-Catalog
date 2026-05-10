@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class PaymentInitiateResponse {
+
     private Long paymentId;
     private PaymentGateway gateway;
     private String transactionId;

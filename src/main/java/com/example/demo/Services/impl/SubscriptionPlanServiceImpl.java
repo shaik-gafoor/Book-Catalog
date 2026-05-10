@@ -28,7 +28,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
             throw new Exception("plan code is already exist ");
         }
         SubscriptionPlan plan = planMapper.toEntity(planDTO);
-        UserDTO currentUser = userService.getCurrentUser();
+        User currentUser = userService.getCurrentUser();
         plan.setCreatedBy(currentUser.getFullName());
         plan.setUpdatedBy(currentUser.getFullName());
         SubscriptionPlan savedPlan = planRepository.save(plan);
@@ -43,7 +43,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
                 ()->new Exception("plan not found!")
         );
         planMapper.updateEntity(existingPlan,planDTO);
-        UserDTO currentUser = userService.getCurrentUser();
+        User currentUser = userService.getCurrentUser();
         existingPlan.setUpdatedBy(currentUser.getFullName());
         SubscriptionPlan updatedPlan = planRepository.save(existingPlan);
         return planMapper.toDTO(updatedPlan);

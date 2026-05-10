@@ -4,6 +4,7 @@ import com.example.demo.Services.SubscriptionService;
 import com.example.demo.exception.SubscriptionException;
 import com.example.demo.payload.dto.SubscriptionDTO;
 import com.example.demo.payload.response.ApiResponse;
+import com.example.demo.payload.response.PaymentInitiateResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -23,7 +24,7 @@ public class SubscriptionController {
     public ResponseEntity<?> subscribe(
              @RequestBody SubscriptionDTO subscription
     ) throws Exception {
-        SubscriptionDTO dto = subscriptionService.subscribe(subscription);
+        PaymentInitiateResponse dto = subscriptionService.subscribe(subscription);
         return ResponseEntity.ok(dto);
     }
 
