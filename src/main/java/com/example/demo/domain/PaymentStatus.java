@@ -21,5 +21,6 @@ public enum PaymentStatus {
     /**
      * Payment was refunded
      */
-    REFUNDED
+    REFUNDED,
+    PROCESSING
 }

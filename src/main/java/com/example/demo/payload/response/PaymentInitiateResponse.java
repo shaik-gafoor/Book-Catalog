@@ -2,12 +2,14 @@ package com.example.demo.payload.response;
 
 import com.example.demo.domain.PaymentGateway;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class PaymentInitiateResponse {
     private Long paymentId;
     private PaymentGateway gateway;
