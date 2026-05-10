@@ -4,6 +4,7 @@ import com.example.demo.Services.PaymentService;
 import com.example.demo.Services.RazorpayService;
 import com.example.demo.domain.PaymentGateway;
 import com.example.demo.domain.PaymentStatus;
+import com.example.demo.mapper.PaymentMapper;
 import com.example.demo.model.Payment;
 import com.example.demo.model.Subscription;
 import com.example.demo.model.User;
@@ -30,6 +31,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final SubscriptionRepository subscriptionRepository;
     private final PaymentRepository paymentRepository;
     private final RazorpayService razorpayService;
+    private final PaymentMapper paymentMapper;
     @Override
     public PaymentInitiateResponse initiatePayment(PaymentInitiateRequest request) throws Exception {
         User user = userRepository.findById(request.getUserId()).get();
@@ -82,6 +84,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public Page<PaymentDTO> getAllPayments(Pageable pageable) {
-        return null;
+        Page<Payment> payments = paymentRepository.findAll(pageable);
+        return payments.map(paymentMapper::toDTO);
     }
 }
