@@ -1,6 +1,6 @@
 package com.example.demo.domain;
 
-public enum FindStatus {
+public enum FineStatus {
     PENDING,
 
     /**

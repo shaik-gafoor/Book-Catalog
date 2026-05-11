@@ -1,6 +1,6 @@
 package com.example.demo.model;
 
-import com.example.demo.domain.FindStatus;
+import com.example.demo.domain.FineStatus;
 import com.example.demo.domain.FineType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -33,7 +33,7 @@ public class Fine {
     @Column(nullable = false)
     private Long amount;
 
-    private FindStatus status;
+    private FineStatus status;
 
     @Column(length = 500)
     private String reason;
