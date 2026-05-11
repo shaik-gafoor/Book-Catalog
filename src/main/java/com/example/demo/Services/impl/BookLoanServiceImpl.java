@@ -101,6 +101,7 @@ public class BookLoanServiceImpl implements BookLoanService {
                 .notes(checkoutRequest.getNotes())
                 .isOverdue(false)
                 .overdueDays(0)
+
                 .build();
 
         // 9. update book available copies

@@ -42,7 +42,7 @@ public class BookLoan {
 
     private LocalDate dueDate;
 
-    @Column(nullable = false)
+
     private LocalDate returnDate;
 
     private Integer renewalCount = 0;
