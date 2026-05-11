@@ -37,4 +37,7 @@ public class BookLoanDTO {
     private Integer overdueDays;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    public void setBookCoverImageUrl(String coverImageUrl) {
+    }
 }
