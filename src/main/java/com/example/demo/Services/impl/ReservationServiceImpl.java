@@ -19,6 +19,9 @@ import com.example.demo.repository.BookLoanRepository;
 import com.example.demo.repository.BookRepository;
 import com.example.demo.repository.ReservationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -150,5 +153,15 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     public pageResponse<ReservationDTO> searchReservations(ReservationSearchRequest searchRequest) {
         return null;
+    }
+
+    private Pageable createPageable(ReservationSearchRequest searchRequest) {
+        // Determine sort direction (ASC vs DESC) based on the request
+        Sort sort = "ASC".equalsIgnoreCase(searchRequest.getSortDirection())
+                ? Sort.by(searchRequest.getSortBy()).ascending()
+                : Sort.by(searchRequest.getSortBy()).descending();
+
+        // Return a PageRequest containing the page index, page size, and sort configuration
+        return PageRequest.of(searchRequest.getPage(), searchRequest.getSize(), sort);
     }
 }
