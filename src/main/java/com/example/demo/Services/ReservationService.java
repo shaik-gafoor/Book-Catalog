@@ -10,9 +10,9 @@ public interface ReservationService {
 
     ReservationDTO createReservationForUser(ReservationRequest reservationRequest, Long userId) throws Exception;
 
-    ReservationDTO cancelReservation(Long reservationId);
+    ReservationDTO cancelReservation(Long reservationId) throws Exception;
 
-    ReservationDTO fulfillReservation(Long reservationId);
+    ReservationDTO fulfillReservation(Long reservationId) throws Exception;
 
     pageResponse<ReservationDTO> getMyReservations(ReservationSearchRequest searchRequest);
 
