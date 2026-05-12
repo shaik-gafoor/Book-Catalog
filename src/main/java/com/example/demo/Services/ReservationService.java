@@ -6,7 +6,7 @@ import com.example.demo.payload.request.ReservationSearchRequest;
 import com.example.demo.payload.response.pageResponse;
 
 public interface ReservationService {
-    ReservationDTO createReservation(ReservationRequest reservationRequest);
+    ReservationDTO createReservation(ReservationRequest reservationRequest) throws Exception;
 
     ReservationDTO createReservationForUser(ReservationRequest reservationRequest, Long userId) throws Exception;
 
@@ -14,7 +14,7 @@ public interface ReservationService {
 
     ReservationDTO fulfillReservation(Long reservationId) throws Exception;
 
-    pageResponse<ReservationDTO> getMyReservations(ReservationSearchRequest searchRequest);
+    pageResponse<ReservationDTO> getMyReservations(ReservationSearchRequest searchRequest) throws Exception;
 
     pageResponse<ReservationDTO> searchReservations(ReservationSearchRequest searchRequest);
 }
