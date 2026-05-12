@@ -19,12 +19,14 @@ import com.example.demo.repository.BookLoanRepository;
 import com.example.demo.repository.BookRepository;
 import com.example.demo.repository.ReservationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -152,7 +154,38 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     public pageResponse<ReservationDTO> searchReservations(ReservationSearchRequest searchRequest) {
-        return null;
+        // Generate pagination and sorting configuration
+        Pageable pageable = createPageable(searchRequest);
+
+        // Query the database using multiple filters
+        Page<Reservation> reservationPage = reservationRepository
+                .searchReservationsWithFilters(
+                        searchRequest.getUserId(),
+                        searchRequest.getBookId(),
+                        searchRequest.getStatus(),
+                        searchRequest.getActiveOnly() != null ? searchRequest.getActiveOnly() : false,
+                        pageable
+                );
+
+        // Map the database page results to a structured PageResponse
+        return buildPageResponse(reservationPage);
+    }
+    private pageResponse<ReservationDTO> buildPageResponse(Page<Reservation> reservationPage) {
+        // Convert entity list to DTO list using Java Streams
+        List<ReservationDTO> dtos = reservationPage.getContent().stream()
+                .map(reservationMapper::toDTO)
+                .toList();
+
+        // Create and populate the custom response object
+        pageResponse<ReservationDTO> response = new pageResponse<>();
+        response.setContent(dtos);
+        response.setPageNumber(reservationPage.getNumber());
+        response.setPageSize(reservationPage.getSize());
+        response.setTotalElements(reservationPage.getTotalElements());
+        response.setTotalPages(reservationPage.getTotalPages());
+        response.setLast(reservationPage.isLast());
+
+        return response;
     }
 
     private Pageable createPageable(ReservationSearchRequest searchRequest) {
