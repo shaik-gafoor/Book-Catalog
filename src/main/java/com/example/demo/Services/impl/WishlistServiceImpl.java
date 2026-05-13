@@ -2,6 +2,7 @@ package com.example.demo.Services.impl;
 
 import com.example.demo.Services.UserService;
 import com.example.demo.Services.WishlistService;
+import com.example.demo.mapper.WishlistMapper;
 import com.example.demo.model.Book;
 import com.example.demo.model.User;
 import com.example.demo.model.Wishlist;
@@ -19,6 +20,7 @@ public class WishlistServiceImpl implements WishlistService {
     private final UserService userService;
     private final BookRepository bookRepository;
     private final WishlistRepository wishlistRepository;
+    private final WishlistMapper wishlistMapper;
 
 
     @Override
@@ -39,12 +41,18 @@ public class WishlistServiceImpl implements WishlistService {
         wishlist.setBook(book);
         wishlist.setNotes(notes);
         Wishlist saved = wishlistRepository.save(wishlist);
-        return null;
+        return wishlistMapper.toDTO(saved);
     }
 
     @Override
-    public void removeFromWishlist(Long bookId) {
+    public void removeFromWishlist(Long bookId) throws Exception {
+        User user = userService.getCurrentUser();
 
+        if(!wishlistRepository.existsByUserIdAndBookId(user.getId(), bookId)) {
+            throw new Exception("book is not in your wishlist");
+        }
+
+        wishlistRepository.deleteByUserIdAndBookId(user.getId(),bookId);
     }
 
     @Override
