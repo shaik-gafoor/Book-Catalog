@@ -11,7 +11,14 @@ import com.example.demo.payload.response.pageResponse;
 import com.example.demo.repository.BookRepository;
 import com.example.demo.repository.WishlistRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -56,7 +63,29 @@ public class WishlistServiceImpl implements WishlistService {
     }
 
     @Override
-    public pageResponse<WishlistDTO> getMyWishlist(int page, int size) {
-        return null;
+    public pageResponse<WishlistDTO> getMyWishlist(int page, int size) throws Exception {
+        Long userId = userService.getCurrentUser().getId();
+        Pageable pageable = PageRequest.of(page,
+                size, Sort.by("addedAt").descending());
+        Page<Wishlist> wishlistPage = wishlistRepository.findByUserId(userId, pageable);
+        return convertToPageResponse(wishlistPage);
+    }
+
+    private pageResponse<WishlistDTO> convertToPageResponse(Page<Wishlist> wishlistPage) {
+        List<WishlistDTO> wishlistDTOs = wishlistPage.getContent()
+                .stream()
+                .map(wishlistMapper::toDTO)
+                .collect(Collectors.toList());
+
+        return new pageResponse<>(
+                wishlistDTOs,
+                wishlistPage.getNumber(),
+                wishlistPage.getSize(),
+                wishlistPage.getTotalElements(),
+                wishlistPage.getTotalPages(),
+                wishlistPage.isLast(),
+                wishlistPage.isFirst(),
+                wishlistPage.isEmpty()
+        );
     }
 }
