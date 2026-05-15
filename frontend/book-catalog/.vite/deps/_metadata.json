@@ -1,0 +1,60 @@
+{
+  "hash": "135c8a15",
+  "configHash": "29aeb6f1",
+  "lockfileHash": "a226a195",
+  "browserHash": "2d9f5276",
+  "optimized": {
+    "@mui/icons-material": {
+      "src": "../../node_modules/@mui/icons-material/index.mjs",
+      "file": "@mui_icons-material.js",
+      "fileHash": "72a28dcd",
+      "needsInterop": false
+    },
+    "@mui/icons-material/EventAvailable": {
+      "src": "../../node_modules/@mui/icons-material/EventAvailable.mjs",
+      "file": "@mui_icons-material_EventAvailable.js",
+      "fileHash": "9d586a14",
+      "needsInterop": false
+    },
+    "@mui/icons-material/History": {
+      "src": "../../node_modules/@mui/icons-material/History.mjs",
+      "file": "@mui_icons-material_History.js",
+      "fileHash": "4c81404c",
+      "needsInterop": false
+    },
+    "@mui/icons-material/TrendingUp": {
+      "src": "../../node_modules/@mui/icons-material/TrendingUp.mjs",
+      "file": "@mui_icons-material_TrendingUp.js",
+      "fileHash": "a82b29c4",
+      "needsInterop": false
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "5286f327",
+      "needsInterop": true
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "eecb1937",
+      "needsInterop": true
+    },
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "e037bf3d",
+      "needsInterop": true
+    }
+  },
+  "chunks": {
+    "createSvgIcon-Bcc5dSzW": {
+      "file": "createSvgIcon-Bcc5dSzW.js",
+      "isDynamicEntry": false
+    },
+    "react-BejDdLFV": {
+      "file": "react-BejDdLFV.js",
+      "isDynamicEntry": false
+    }
+  }
+}

@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import StatesCard from "./StatesCard";
+import CurrentLoans from "./CurrentLoans";
+import Reservation from "./Reservation";
+import ReadingHistory from "./ReadingHistory";
+import Recommandation from "./Recommandation";
 import {
   LibraryBooks,
   AutoStories,
   People,
   TrendingUp,
 } from "@mui/icons-material";
+import { Box, Tabs, Tab } from "@mui/material";
 import { statsConfig } from "./StateConfig";
 
 const cheerEmojis = [
@@ -21,12 +26,12 @@ const cheerEmojis = [
   "🙌",
 ];
 const cheerMessages = [
-  "🌟 You're crushing it!",
+  "🌟 You're crushing it — 25 books done!",
   "🔥 On fire! Keep that reading streak!",
   "🏆 Champion reader in the making!",
-  "💪 Unstoppable glory!",
+  "💪 Unstoppable! 5 more to glory!",
   "📚 Books completed, minds expanded!",
-  "🎊 stories richer — amazing!",
+  "🎊 25 stories richer — amazing!",
   "🙌 The finish line is SO close!",
   "⭐ Star reader alert — that's you!",
 ];
@@ -129,17 +134,17 @@ const ReadingGoalCard = () => {
           from { transform: translate(0, 0) scale(1); opacity: 1; }
           to   { transform: translate(var(--dx), var(--dy)) scale(0.3); opacity: 0; }
         }
-        .rg-book-wrap { animation: sparkIn 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.2s both; }
+        .rg-book-wrap  { animation: sparkIn 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.2s both; }
         .rg-book-inner { animation: float 3s ease-in-out 1s infinite; }
         .rg-bar-fill {
           animation: ${barVisible ? `fillBar 1.2s cubic-bezier(0.4,0,0.2,1) 0.3s both` : "none"};
           width: ${barVisible ? `${PROGRESS}%` : "0%"};
         }
-        .rg-shimmer { animation: shimmer 2.5s ease-in-out 1.5s infinite; }
-        .rg-stat-1  { animation: countUp 0.5s ease 0.7s both; opacity: 0; }
-        .rg-stat-2  { animation: countUp 0.5s ease 0.85s both; opacity: 0; }
-        .rg-cheer   { animation: countUp 0.5s ease 1s both; opacity: 0; }
-        .rg-msg     { animation: fadeSlideUp 0.5s ease 1.2s both; opacity: 0; }
+        .rg-shimmer  { animation: shimmer 2.5s ease-in-out 1.5s infinite; }
+        .rg-stat-1   { animation: countUp 0.5s ease 0.7s both; opacity: 0; }
+        .rg-stat-2   { animation: countUp 0.5s ease 0.85s both; opacity: 0; }
+        .rg-cheer    { animation: countUp 0.5s ease 1s both; opacity: 0; }
+        .rg-msg      { animation: fadeSlideUp 0.5s ease 1.2s both; opacity: 0; }
         .rg-emoji-bounce { animation: cheerBounce 0.7s cubic-bezier(0.34,1.56,0.64,1) both; }
         .rg-emoji-idle   { animation: wiggle 1s ease-in-out 2s 3; }
         .rg-msg-slide    { animation: fadeSlideUp 0.4s ease both; }
@@ -296,8 +301,11 @@ const ReadingGoalCard = () => {
 };
 
 const Dashboard = () => {
+  const [tabValue, setTabValue] = useState(0);
+
   return (
     <div className="min-h-screen bg-gray-50 px-6 py-8">
+      {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
           Dashboard
@@ -308,6 +316,7 @@ const Dashboard = () => {
         </p>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stateData.map((item, index) => (
           <StatesCard
@@ -322,7 +331,30 @@ const Dashboard = () => {
         ))}
       </div>
 
+      {/* Reading Goal */}
       <ReadingGoalCard />
+
+      {/* Tab Section */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden mt-8">
+        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+          <Tabs
+            value={tabValue}
+            onChange={(_, newValue) => setTabValue(newValue)}
+            aria-label="dashboard tabs"
+          >
+            <Tab label="Current Loans" />
+            <Tab label="Reservations" />
+            <Tab label="Reading History" />
+            <Tab label="Recommendations" />
+          </Tabs>
+        </Box>
+
+        {/* Tab Content */}
+        {tabValue === 0 && <CurrentLoans />}
+        {tabValue === 1 && <Reservation />}
+        {tabValue === 2 && <ReadingHistory />}
+        {tabValue === 3 && <Recommandation />}
+      </div>
     </div>
   );
 };
