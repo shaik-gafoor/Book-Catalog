@@ -4,13 +4,8 @@ import CurrentLoans from "./CurrentLoans";
 import Reservation from "./Reservation";
 import ReadingHistory from "./ReadingHistory";
 import Recommandation from "./Recommandation";
-import {
-  LibraryBooks,
-  AutoStories,
-  People,
-  TrendingUp,
-} from "@mui/icons-material";
 import { Box, Tabs, Tab } from "@mui/material";
+import { MenuBook } from "@mui/icons-material";
 import { statsConfig } from "./StateConfig";
 
 const cheerEmojis = [
@@ -87,7 +82,6 @@ const ReadingGoalCard = () => {
     setMsgIndex((prev) => (prev + 1) % cheerMessages.length);
     setEmojiKey((k) => k + 1);
     setMsgKey((k) => k + 1);
-
     setTimeout(() => setIsAnimating(false), 700);
   };
 
@@ -148,6 +142,21 @@ const ReadingGoalCard = () => {
         .rg-emoji-bounce { animation: cheerBounce 0.7s cubic-bezier(0.34,1.56,0.64,1) both; }
         .rg-emoji-idle   { animation: wiggle 1s ease-in-out 2s 3; }
         .rg-msg-slide    { animation: fadeSlideUp 0.4s ease both; }
+        .rg-tab .MuiTab-root {
+          font-size: 0.8rem;
+          font-weight: 500;
+          color: #6b7280;
+          text-transform: none;
+          min-height: 44px;
+        }
+        .rg-tab .MuiTab-root.Mui-selected {
+          color: #111827;
+          font-weight: 600;
+        }
+        .rg-tab .MuiTabs-indicator {
+          background-color: #1a1a1a;
+          height: 2px;
+        }
       `}</style>
 
       {/* Burst particles */}
@@ -176,7 +185,7 @@ const ReadingGoalCard = () => {
       })}
 
       {/* Reading Goal Card */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div style={{ animation: "countUp 0.5s ease both" }}>
@@ -190,44 +199,32 @@ const ReadingGoalCard = () => {
               <span className="text-sm text-gray-500">
                 {TOTAL_BOOKS - READ_BOOKS} books to go
               </span>
-              <span
-                className="text-xs font-medium px-2 py-0.5 rounded-full"
-                style={{ background: "#EAF3DE", color: "#3B6D11" }}
-              >
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
                 On track
               </span>
             </div>
           </div>
 
           <div className="rg-book-wrap">
-            <div
-              className="rg-book-inner w-14 h-14 rounded-full flex items-center justify-center"
-              style={{
-                background: "linear-gradient(135deg, #EAF3DE 0%, #C0DD97 100%)",
-              }}
-            >
-              <span style={{ fontSize: 26 }}>📗</span>
+            <div className="rg-book-inner w-14 h-14 rounded-full flex items-center justify-center bg-gray-100">
+              <MenuBook sx={{ fontSize: 26, color: "#374151" }} />
             </div>
           </div>
         </div>
 
         {/* Progress Bar */}
-        <div
-          className="relative h-3.5 rounded-full overflow-hidden mb-2.5"
-          style={{ background: "#f3f4f6" }}
-        >
+        <div className="relative h-3 rounded-full overflow-hidden mb-2.5 bg-gray-100">
           <div
             className="rg-bar-fill absolute left-0 top-0 bottom-0 rounded-full"
             style={{
-              background:
-                "linear-gradient(90deg, #639922 0%, #97C459 60%, #C0DD97 100%)",
+              background: "linear-gradient(90deg, #1a1a1a 0%, #6b7280 100%)",
             }}
           >
             <div
               className="rg-shimmer absolute inset-0 rounded-full"
               style={{
                 background:
-                  "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)",
+                  "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%)",
                 width: "40%",
               }}
             />
@@ -247,13 +244,13 @@ const ReadingGoalCard = () => {
 
         {/* Stats Row */}
         <div className="flex gap-2 border-t border-gray-100 pt-4 mb-4">
-          <div className="rg-stat-1 flex-1 bg-gray-50 rounded-xl p-3 text-center">
+          <div className="rg-stat-1 flex-1 bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">
             <p className="text-lg font-semibold text-gray-900 m-0">
               {READ_BOOKS}
             </p>
             <p className="text-xs text-gray-400 mt-0.5">Read</p>
           </div>
-          <div className="rg-stat-2 flex-1 bg-gray-50 rounded-xl p-3 text-center">
+          <div className="rg-stat-2 flex-1 bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">
             <p className="text-lg font-semibold text-gray-900 m-0">
               {TOTAL_BOOKS - READ_BOOKS}
             </p>
@@ -261,7 +258,7 @@ const ReadingGoalCard = () => {
           </div>
           <div
             ref={cheerCardRef}
-            className="rg-cheer flex-1 bg-gray-50 rounded-xl p-3 text-center cursor-pointer select-none"
+            className="rg-cheer flex-1 bg-gray-50 border border-gray-100 rounded-xl p-3 text-center cursor-pointer select-none hover:bg-gray-100 transition-colors"
             onClick={handleCheerClick}
           >
             <div
@@ -283,8 +280,9 @@ const ReadingGoalCard = () => {
             textAlign: "center",
             fontSize: 13,
             fontWeight: 500,
-            color: "#3B6D11",
-            background: "#EAF3DE",
+            color: "#374151",
+            background: "#f3f4f6",
+            border: "1px solid #e5e7eb",
             borderRadius: 8,
             padding: "8px 12px",
             minHeight: 36,
@@ -307,21 +305,22 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-50 px-6 py-8">
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
           Dashboard
         </h1>
-        <p className="mt-2 text-sm text-gray-500 max-w-lg">
+        <p className="mt-1.5 text-sm text-gray-500 max-w-lg">
           A place where books are more than pages — they become ideas, dreams,
           and the beginning of something extraordinary.
         </p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {stateData.map((item, index) => (
           <StatesCard
             bgColor={item.bgColor}
             textColor={item.textColor}
+            borderColor={item.borderColor}
             icon={item.icon}
             value={item.value}
             title={item.title}
@@ -335,12 +334,33 @@ const Dashboard = () => {
       <ReadingGoalCard />
 
       {/* Tab Section */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden mt-8">
-        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mt-6">
+        <Box
+          className="rg-tab"
+          sx={{ borderBottom: 1, borderColor: "#f3f4f6", px: 2 }}
+        >
           <Tabs
             value={tabValue}
             onChange={(_, newValue) => setTabValue(newValue)}
             aria-label="dashboard tabs"
+            sx={{
+              "& .MuiTab-root": {
+                fontSize: "0.8rem",
+                fontWeight: 500,
+                color: "#6b7280",
+                textTransform: "none",
+                minHeight: 44,
+                px: 1.5,
+              },
+              "& .MuiTab-root.Mui-selected": {
+                color: "#111827",
+                fontWeight: 600,
+              },
+              "& .MuiTabs-indicator": {
+                backgroundColor: "#1a1a1a",
+                height: 2,
+              },
+            }}
           >
             <Tab label="Current Loans" />
             <Tab label="Reservations" />
@@ -349,7 +369,6 @@ const Dashboard = () => {
           </Tabs>
         </Box>
 
-        {/* Tab Content */}
         {tabValue === 0 && <CurrentLoans />}
         {tabValue === 1 && <Reservation />}
         {tabValue === 2 && <ReadingHistory />}
