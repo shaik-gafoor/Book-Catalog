@@ -2,7 +2,7 @@ import React from "react";
 
 function StatesCard({
   bgColor = "bg-gray-100",
-  textColor = "text-gray-700",
+  textColor = "text-gray-900",
   borderColor = "border-gray-200",
   icon,
   value,
@@ -11,7 +11,7 @@ function StatesCard({
 }) {
   return (
     <div
-      className={`bg-white rounded-xl border ${borderColor} p-5 flex flex-col gap-4 shadow-sm hover:shadow-md transition-shadow duration-200`}
+      className={`bg-white rounded-xl border ${borderColor} p-5 flex flex-col gap-4 hover:shadow-sm transition-shadow duration-200`}
     >
       <div className="flex items-center justify-between">
         <div className={`p-2.5 rounded-lg ${bgColor}`}>{icon}</div>
