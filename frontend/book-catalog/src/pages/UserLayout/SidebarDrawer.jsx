@@ -21,19 +21,13 @@ const SidebarDrawer = () => {
   const navigate = useNavigate();
 
   const isActive = (path) => {
-    if (path === "/") {
-      return location.pathname === "/";
-    }
+    if (path === "/") return location.pathname === "/";
     return location.pathname.startsWith(path);
   };
 
-  const handleChangePath = (path) => {
-    navigate(path);
-  };
+  const handleChangePath = (path) => navigate(path);
 
-  const handleLogout = () => {
-    console.log("logout");
-  };
+  const handleLogout = () => console.log("logout");
 
   const NavButton = ({ item }) => {
     const active = isActive(item.path);
@@ -83,11 +77,13 @@ const SidebarDrawer = () => {
             </ListItemIcon>
             <ListItemText
               primary={item.title}
-              primaryTypographyProps={{
-                fontSize: "0.85rem",
-                fontWeight: active ? 600 : 500,
-                color: active ? "#ffffff" : "#374151",
-                letterSpacing: "0.01em",
+              sx={{
+                "& .MuiListItemText-primary": {
+                  fontSize: "0.85rem",
+                  fontWeight: active ? 600 : 500,
+                  color: active ? "#ffffff" : "#374151",
+                  letterSpacing: "0.01em",
+                },
               }}
             />
           </ListItemButton>
@@ -108,7 +104,7 @@ const SidebarDrawer = () => {
         borderRight: "1px solid #e5e7eb",
       }}
     >
-      {/* ── Logo / Brand ── */}
+      {/* Logo / Brand */}
       <Box
         sx={{
           px: 3,
@@ -157,7 +153,7 @@ const SidebarDrawer = () => {
         </Box>
       </Box>
 
-      {/* ── Main Nav ── */}
+      {/* Main Nav */}
       <Box sx={{ flex: 1, overflowY: "auto", pt: 1.5 }}>
         <Typography
           variant="caption"
@@ -206,14 +202,8 @@ const SidebarDrawer = () => {
         </List>
       </Box>
 
-      {/* ── Logout + Footer ── */}
-      <Box
-        sx={{
-          px: 2,
-          py: 2,
-          borderTop: "1px solid #f3f4f6",
-        }}
-      >
+      {/* Logout + Footer */}
+      <Box sx={{ px: 2, py: 2, borderTop: "1px solid #f3f4f6" }}>
         <ListItemButton
           onClick={handleLogout}
           sx={{
@@ -226,26 +216,29 @@ const SidebarDrawer = () => {
             "&:hover": {
               bgcolor: "#1a1a1a",
               borderColor: "#1a1a1a",
-              "& .logout-icon": { color: "#ffffff" },
-              "& .logout-text": { color: "#ffffff" },
+              "& .MuiListItemIcon-root": { color: "#ffffff" },
+              "& .MuiListItemText-primary": { color: "#ffffff" },
             },
           }}
         >
-          <ListItemIcon sx={{ minWidth: 36 }}>
-            <Logout
-              className="logout-icon"
-              fontSize="small"
-              sx={{ color: "#6b7280", transition: "color 0.2s ease" }}
-            />
+          <ListItemIcon
+            sx={{
+              minWidth: 36,
+              color: "#6b7280",
+              transition: "color 0.2s ease",
+            }}
+          >
+            <Logout fontSize="small" />
           </ListItemIcon>
           <ListItemText
             primary="Logout"
-            primaryTypographyProps={{
-              fontSize: "0.85rem",
-              fontWeight: 500,
-              color: "#374151",
-              className: "logout-text",
-              sx: { transition: "color 0.2s ease" },
+            sx={{
+              "& .MuiListItemText-primary": {
+                fontSize: "0.85rem",
+                fontWeight: 500,
+                color: "#374151",
+                transition: "color 0.2s ease",
+              },
             }}
           />
         </ListItemButton>
