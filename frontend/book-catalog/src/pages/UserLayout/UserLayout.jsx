@@ -1,21 +1,28 @@
-import React from "react";
+import React, { useState } from "react";
 import { Box, Toolbar } from "@mui/material";
 import { Outlet } from "react-router-dom";
 import UserSidebar from "./UserSidebar";
+import Navbar from "./Navbar";
 
 const drawerWidth = 240;
 
 const UserLayout = () => {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleDrawerToggle = () => {
+    setMobileOpen((prev) => !prev);
+  };
+
   return (
-    <Box
-      sx={{
-        display: "flex",
-        minHeight: "100vh",
-        bgcolor: "#f9fafb",
-      }}
-    >
+    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "#f9fafb" }}>
+      {/* Navbar */}
+      <Navbar handleDrawerToggle={handleDrawerToggle} />
+
       {/* Sidebar */}
-      <UserSidebar />
+      <UserSidebar
+        mobileOpen={mobileOpen}
+        handleDrawerToggle={handleDrawerToggle}
+      />
 
       {/* Main content */}
       <Box
@@ -24,11 +31,14 @@ const UserLayout = () => {
           flexGrow: 1,
           width: { md: `calc(100% - ${drawerWidth}px)` },
           minHeight: "100vh",
-          p: 3,
           bgcolor: "#f9fafb",
         }}
       >
-        <Outlet />
+        {/* Offset for fixed AppBar */}
+        <Toolbar sx={{ minHeight: "60px !important" }} />
+        <Box sx={{ p: 3 }}>
+          <Outlet />
+        </Box>
       </Box>
     </Box>
   );
