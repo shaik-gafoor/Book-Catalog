@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { FormControl, Select, MenuItem } from "@mui/material";
+import {
+  FormControl,
+  Select,
+  MenuItem,
+  TextField,
+  InputAdornment,
+  InputLabel,
+} from "@mui/material";
+import { Search as SearchIcon, Sort as SortIcon } from "@mui/icons-material";
 import CatalogFilter from "./CatalogFilter";
 
 const genres = [
@@ -7,89 +15,98 @@ const genres = [
     active: true,
     bookCount: 45,
     code: "FANTASY",
-    createdAt: "2025-10-10T10:43:50.987654",
-    description:
-      "Genre that features magical elements, mythical creatures, and imaginary worlds.",
     displayOrder: 1,
     id: 1,
     name: "Fantasy",
-    parentGenreId: null,
-    parentGenreName: null,
-    subGenres: null,
-    updatedAt: "2025-10-10T10:43:50.987654",
+    description:
+      "Genre that features magical elements, mythical creatures, and imaginary worlds.",
   },
   {
     active: true,
     bookCount: 38,
     code: "SCI_FI",
-    createdAt: "2025-10-10T10:43:50.987654",
-    description:
-      "Genre focused on futuristic technology, space exploration, and scientific concepts.",
     displayOrder: 2,
     id: 2,
     name: "Science Fiction",
-    parentGenreId: null,
-    parentGenreName: null,
-    subGenres: null,
-    updatedAt: "2025-10-10T10:43:50.987654",
+    description:
+      "Genre focused on futuristic technology, space exploration, and scientific concepts.",
   },
   {
     active: true,
     bookCount: 52,
     code: "MYSTERY",
-    createdAt: "2025-10-10T10:43:50.987654",
-    description:
-      "Genre involving suspenseful events, crime solving, and investigations.",
     displayOrder: 3,
     id: 3,
     name: "Mystery",
-    parentGenreId: null,
-    parentGenreName: null,
-    subGenres: null,
-    updatedAt: "2025-10-10T10:43:50.987654",
+    description:
+      "Genre involving suspenseful events, crime solving, and investigations.",
   },
   {
     active: true,
     bookCount: 29,
     code: "ROMANCE",
-    createdAt: "2025-10-10T10:43:50.987654",
-    description:
-      "Genre centered around love stories, emotional relationships, and romance.",
     displayOrder: 4,
     id: 4,
     name: "Romance",
-    parentGenreId: null,
-    parentGenreName: null,
-    subGenres: null,
-    updatedAt: "2025-10-10T10:43:50.987654",
+    description:
+      "Genre centered around love stories, emotional relationships, and romance.",
   },
   {
     active: true,
     bookCount: 41,
     code: "HORROR",
-    createdAt: "2025-10-10T10:43:50.987654",
-    description:
-      "Genre designed to create fear, suspense, and psychological tension.",
     displayOrder: 5,
     id: 5,
     name: "Horror",
-    parentGenreId: null,
-    parentGenreName: null,
-    subGenres: null,
-    updatedAt: "2025-10-10T10:43:50.987654",
+    description:
+      "Genre designed to create fear, suspense, and psychological tension.",
   },
 ];
+
+const inputSx = {
+  "& .MuiOutlinedInput-root": {
+    fontSize: "0.875rem",
+    borderRadius: "10px",
+    color: "#374151",
+    bgcolor: "#ffffff",
+    "& fieldset": { borderColor: "#e5e7eb" },
+    "&:hover fieldset": { borderColor: "#d1d5db" },
+    "&.Mui-focused fieldset": { borderColor: "#1a1a1a", borderWidth: 1 },
+  },
+  "& .MuiInputLabel-root": { fontSize: "0.875rem", color: "#9ca3af" },
+  "& .MuiInputLabel-root.Mui-focused": { color: "#1a1a1a" },
+};
+
+const selectSx = {
+  fontSize: "0.83rem",
+  borderRadius: "10px",
+  color: "#374151",
+  "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e5e7eb" },
+  "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#d1d5db" },
+  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+    borderColor: "#1a1a1a",
+    borderWidth: 1,
+  },
+};
 
 const BookPage = () => {
   const [selectedGenreId, setSelectedGenreId] = useState(null);
   const [availabilityFilter, setAvailabilityFilter] = useState("All");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortDirection, setSortDirection] = useState("DESC");
 
-  // Fixed: derive selectedGenre from state
   const selectedGenre = genres.find((g) => g.id === selectedGenreId);
 
-  const handleGenreSelect = (genreId) => {
-    setSelectedGenreId(genreId);
+  const handleGenreSelect = (genreId) => setSelectedGenreId(genreId);
+
+  const handleSortChange = (value) => {
+    const [field, direction] = value.split("-");
+    setSortBy(field);
+    setSortDirection(direction.toUpperCase());
   };
+
+  const getCurrentSortValue = () => `${sortBy}-${sortDirection.toLowerCase()}`;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -105,11 +122,10 @@ const BookPage = () => {
         </p>
       </div>
 
-      {/* Main Content */}
+      {/* Layout */}
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Sidebar */}
         <aside className="lg:w-64 flex-shrink-0 space-y-4">
-          {/* Genre Filter */}
           <CatalogFilter
             genres={genres}
             selectedGenreId={selectedGenreId}
@@ -125,21 +141,7 @@ const BookPage = () => {
               <Select
                 value={availabilityFilter}
                 onChange={(e) => setAvailabilityFilter(e.target.value)}
-                sx={{
-                  fontSize: "0.83rem",
-                  borderRadius: "8px",
-                  color: "#374151",
-                  "& .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "#e5e7eb",
-                  },
-                  "&:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "#d1d5db",
-                  },
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "#1a1a1a",
-                    borderWidth: 1,
-                  },
-                }}
+                sx={selectSx}
               >
                 <MenuItem value="All" sx={{ fontSize: "0.83rem" }}>
                   All Books
@@ -155,12 +157,74 @@ const BookPage = () => {
           </div>
         </aside>
 
-        {/* Book Grid */}
-        <div className="flex-1">
+        {/* Main */}
+        <main className="flex-1 space-y-4">
+          {/* Search + Sort */}
+          <div className="flex flex-col md:flex-row gap-3">
+            {/* Search */}
+            <div className="flex-1">
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Search by title, author, or category..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon sx={{ fontSize: 18, color: "#9ca3af" }} />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+                sx={inputSx}
+              />
+            </div>
+
+            {/* Sort */}
+            <div className="md:w-56">
+              <FormControl fullWidth size="small" sx={inputSx}>
+                <InputLabel>Sort By</InputLabel>
+                <Select
+                  value={getCurrentSortValue()}
+                  onChange={(e) => handleSortChange(e.target.value)}
+                  label="Sort By"
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <SortIcon sx={{ fontSize: 18, color: "#9ca3af" }} />
+                    </InputAdornment>
+                  }
+                  sx={selectSx}
+                >
+                  <MenuItem value="title-asc" sx={{ fontSize: "0.83rem" }}>
+                    Title (A–Z)
+                  </MenuItem>
+                  <MenuItem value="title-desc" sx={{ fontSize: "0.83rem" }}>
+                    Title (Z–A)
+                  </MenuItem>
+                  <MenuItem value="author-asc" sx={{ fontSize: "0.83rem" }}>
+                    Author (A–Z)
+                  </MenuItem>
+                  <MenuItem value="author-desc" sx={{ fontSize: "0.83rem" }}>
+                    Author (Z–A)
+                  </MenuItem>
+                  <MenuItem value="createdAt-desc" sx={{ fontSize: "0.83rem" }}>
+                    Newest First
+                  </MenuItem>
+                  <MenuItem value="createdAt-asc" sx={{ fontSize: "0.83rem" }}>
+                    Oldest First
+                  </MenuItem>
+                </Select>
+              </FormControl>
+            </div>
+          </div>
+
+          {/* Book Grid placeholder */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-gray-400 text-sm">
             Book grid will appear here
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );
