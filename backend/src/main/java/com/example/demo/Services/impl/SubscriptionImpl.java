@@ -77,12 +77,15 @@ public class SubscriptionImpl implements SubscriptionService {
 
     @Override
     public SubscriptionDTO getUsersActiveSubscription(Long userId) throws Exception {
-        User user = userService.getCurrentUser();
-
-        Subscription subscription = subscriptionRepository
-                .findActiveSubscriptionByUserId(user.getId(), LocalDate.now())
-                .orElseThrow(() -> new SubscriptionException("no active subscription found!"));
-        return subscriptionMapper.toDTO(subscription);
+        try {
+            User user = userService.getCurrentUser();
+            Subscription subscription = subscriptionRepository
+                    .findActiveSubscriptionByUserId(user.getId(), LocalDate.now())
+                    .orElse(null);
+            return subscription == null ? null : subscriptionMapper.toDTO(subscription);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     @Override

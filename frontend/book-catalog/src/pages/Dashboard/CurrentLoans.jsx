@@ -1,36 +1,7 @@
 import React from "react";
 import CurrentLoanCard from "./CurrentLoanCard";
 
-const currentLoansData = [
-  {
-    id: 1,
-    title: "Atomic Habits",
-    author: "James Clear",
-    dueDate: "May 20, 2025",
-    daysLeft: 5,
-  },
-  {
-    id: 2,
-    title: "The Alchemist",
-    author: "Paulo Coelho",
-    dueDate: "May 25, 2025",
-    daysLeft: 10,
-  },
-  {
-    id: 3,
-    title: "Deep Work",
-    author: "Cal Newport",
-    dueDate: "May 18, 2025",
-    daysLeft: 3,
-  },
-  {
-    id: 4,
-    title: "Sapiens",
-    author: "Yuval Noah Harari",
-    dueDate: "June 1, 2025",
-    daysLeft: 17,
-  },
-];
+const currentLoansData = [];
 
 function CurrentLoans() {
   return (
@@ -44,17 +15,23 @@ function CurrentLoans() {
         </span>
       </div>
 
-      <div className="space-y-3">
-        {currentLoansData.map((item) => (
-          <CurrentLoanCard
-            key={item.id}
-            title={item.title}
-            author={item.author}
-            dueDate={item.dueDate}
-            daysLeft={item.daysLeft}
-          />
-        ))}
-      </div>
+      {currentLoansData.length > 0 ? (
+        <div className="space-y-3">
+          {currentLoansData.map((item) => (
+            <CurrentLoanCard
+              key={item.id}
+              title={item.title}
+              author={item.author}
+              dueDate={item.dueDate}
+              daysLeft={item.daysLeft}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
+          No current loans to show.
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import React from "react";
 import {
   Dashboard as DashboardIcon,
   MenuBook as MenuBookIcon,
+  LibraryAdd as LibraryAddIcon,
   EventNote as EventNoteIcon,
   CardMembership as CardMembershipIcon,
   Favorite as FavoriteIcon,
@@ -22,6 +23,12 @@ export const navigationItems = [
     path: "/books",
     icon: <MenuBookIcon fontSize="small" />,
     description: "Explore Library",
+  },
+  {
+    title: "Add Book",
+    path: "/add-book",
+    icon: <LibraryAddIcon fontSize="small" />,
+    description: "Upload a new title",
   },
   {
     title: "My Loans",

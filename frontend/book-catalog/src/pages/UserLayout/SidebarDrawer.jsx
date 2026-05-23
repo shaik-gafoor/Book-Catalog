@@ -15,6 +15,7 @@ import { alpha } from "@mui/material/styles";
 import { MenuBook, Logout } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { navigationItems, secondaryItems } from "./navigationItems";
+import { clearAuthSession } from "../../api/libraryApi";
 
 const SidebarDrawer = () => {
   const location = useLocation();
@@ -27,7 +28,10 @@ const SidebarDrawer = () => {
 
   const handleChangePath = (path) => navigate(path);
 
-  const handleLogout = () => console.log("logout");
+  const handleLogout = () => {
+    clearAuthSession();
+    navigate("/auth");
+  };
 
   const NavButton = ({ item }) => {
     const active = isActive(item.path);

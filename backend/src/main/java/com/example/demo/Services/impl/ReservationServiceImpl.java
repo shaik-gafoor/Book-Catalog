@@ -58,7 +58,7 @@ public class ReservationServiceImpl implements ReservationService {
         }
 
 // 1. validate user exist
-        User user = userService.getCurrentUser();
+        User user = userService.findById(userId);
 
 // 2. validate book exist
         Book book = bookRepository.findById(reservationRequest.getBookId())
@@ -66,10 +66,6 @@ public class ReservationServiceImpl implements ReservationService {
 //3
         if (reservationRepository.hasActiveReservation(userId, book.getId())) {
             throw new Exception("you have already reservation on this book");
-        }
-// 4. Check if book is already available
-        if (book.getAvailableCopies() > 0) {
-            throw new Exception("book is already available");
         }
 
 // 5. check user's active reservation limit
@@ -83,16 +79,27 @@ public class ReservationServiceImpl implements ReservationService {
         Reservation reservation = new Reservation();
         reservation.setUser(user);
         reservation.setBook(book);
-        reservation.setStatus(ReservationStatus.PENDING);
         reservation.setReservedAt(LocalDateTime.now());
         reservation.setNotificationSent(false);
         reservation.setNotes(reservationRequest.getNotes());
 
-        long pendingCount = reservationRepository.countPendingReservationsByBook(
-                book.getId()
-        );
+        boolean bookCurrentlyAvailable = book.getAvailableCopies() != null
+                && book.getAvailableCopies() > 0;
 
-        reservation.setQueuePosition((int) pendingCount + 1);
+        if (bookCurrentlyAvailable) {
+            reservation.setStatus(ReservationStatus.AVAILABLE);
+            reservation.setAvailableAt(LocalDateTime.now());
+            reservation.setAvailableUntil(LocalDateTime.now().plusDays(3));
+            reservation.setQueuePosition(0);
+        } else {
+            reservation.setStatus(ReservationStatus.PENDING);
+
+            long pendingCount = reservationRepository.countPendingReservationsByBook(
+                    book.getId()
+            );
+
+            reservation.setQueuePosition((int) pendingCount + 1);
+        }
 
         Reservation savedReservation = reservationRepository.save(reservation);
 

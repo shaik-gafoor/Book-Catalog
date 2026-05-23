@@ -16,16 +16,11 @@ import {
   AssignmentReturn,
   WarningAmberOutlined,
 } from "@mui/icons-material";
+import { formatDate } from "../../utils/format";
 
 const statusConfig = {
-  ACTIVE: {
-    label: "Active",
-    bg: "#f9fafb",
-    color: "#374151",
-    border: "#e5e7eb",
-  },
-  CURRENT: {
-    label: "Current",
+  CHECKED_OUT: {
+    label: "Checked Out",
     bg: "#f9fafb",
     color: "#374151",
     border: "#e5e7eb",
@@ -78,9 +73,10 @@ const InfoRow = ({ icon, label, value }) => (
   </Box>
 );
 
-const LoanCard = ({ loan }) => {
-  const status = statusConfig[loan.status] || statusConfig.ACTIVE;
+const LoanCard = ({ loan, onRenew, onCheckin }) => {
+  const status = statusConfig[loan.status] || statusConfig.CHECKED_OUT;
   const iconColor = "#9ca3af";
+  const coverImage = loan.bookCoverImage || loan.coverImageUrl;
 
   return (
     <Card
@@ -102,7 +98,6 @@ const LoanCard = ({ loan }) => {
             flexDirection: { xs: "column", md: "row" },
           }}
         >
-          {/* Book Cover */}
           <Box
             sx={{
               width: 76,
@@ -120,9 +115,9 @@ const LoanCard = ({ loan }) => {
               "&:hover": { transform: "scale(1.03)" },
             }}
           >
-            {loan.bookCoverImage ? (
+            {coverImage ? (
               <img
-                src={loan.bookCoverImage}
+                src={coverImage}
                 alt={loan.bookTitle}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
@@ -131,7 +126,6 @@ const LoanCard = ({ loan }) => {
             )}
           </Box>
 
-          {/* Book Details */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Box
               sx={{
@@ -153,7 +147,6 @@ const LoanCard = ({ loan }) => {
               >
                 {loan.bookTitle}
               </Typography>
-              {/* Status chip */}
               <Chip
                 label={status.label}
                 size="small"
@@ -193,7 +186,6 @@ const LoanCard = ({ loan }) => {
               </Typography>
             </Box>
 
-            {/* Date grid */}
             <Box
               sx={{
                 display: "grid",
@@ -204,7 +196,7 @@ const LoanCard = ({ loan }) => {
               <InfoRow
                 icon={<CalendarToday sx={{ fontSize: 13, color: iconColor }} />}
                 label="Checkout"
-                value={loan.checkoutDate}
+                value={formatDate(loan.checkoutDate)}
               />
               <InfoRow
                 icon={
@@ -216,7 +208,7 @@ const LoanCard = ({ loan }) => {
                   />
                 }
                 label="Due Date"
-                value={loan.dueDate}
+                value={formatDate(loan.dueDate)}
               />
               {loan.returnDate && (
                 <InfoRow
@@ -224,7 +216,7 @@ const LoanCard = ({ loan }) => {
                     <AssignmentReturn sx={{ fontSize: 13, color: iconColor }} />
                   }
                   label="Returned"
-                  value={loan.returnDate}
+                  value={formatDate(loan.returnDate)}
                 />
               )}
               {loan.isOverdue && (
@@ -241,7 +233,6 @@ const LoanCard = ({ loan }) => {
             </Box>
           </Box>
 
-          {/* Vertical divider on md+ */}
           <Divider
             orientation="vertical"
             flexItem
@@ -251,7 +242,6 @@ const LoanCard = ({ loan }) => {
             }}
           />
 
-          {/* Loan Meta */}
           <Box
             sx={{
               minWidth: 140,
@@ -279,7 +269,6 @@ const LoanCard = ({ loan }) => {
           </Box>
         </Box>
 
-        {/* Note */}
         {loan.notes && (
           <>
             <Divider sx={{ my: 2, borderColor: "#f3f4f6" }} />
@@ -294,7 +283,6 @@ const LoanCard = ({ loan }) => {
 
         <Divider sx={{ my: 2, borderColor: "#f3f4f6" }} />
 
-        {/* Action Buttons */}
         <Box
           sx={{
             display: "flex",
@@ -325,27 +313,46 @@ const LoanCard = ({ loan }) => {
             View Details
           </Button>
 
-          {(loan.status === "ACTIVE" || loan.status === "CURRENT") &&
-            !loan.returnDate && (
-              <Button
-                variant="contained"
-                size="small"
-                sx={{
-                  textTransform: "none",
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  borderRadius: "8px",
-                  bgcolor: "#1a1a1a",
-                  color: "#ffffff",
-                  px: 2,
-                  boxShadow: "none",
-                  "&:hover": { bgcolor: "#374151", boxShadow: "none" },
-                  transition: "all 0.2s ease",
-                }}
-              >
-                Return Book
-              </Button>
-            )}
+          {loan.status === "CHECKED_OUT" && !loan.returnDate && onRenew && (
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => onRenew(loan)}
+              sx={{
+                textTransform: "none",
+                fontSize: "0.78rem",
+                fontWeight: 600,
+                borderRadius: "8px",
+                borderColor: "#e5e7eb",
+                color: "#374151",
+                px: 2,
+              }}
+            >
+              Renew
+            </Button>
+          )}
+
+          {loan.status === "CHECKED_OUT" && !loan.returnDate && onCheckin && (
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => onCheckin(loan)}
+              sx={{
+                textTransform: "none",
+                fontSize: "0.78rem",
+                fontWeight: 600,
+                borderRadius: "8px",
+                bgcolor: "#1a1a1a",
+                color: "#ffffff",
+                px: 2,
+                boxShadow: "none",
+                "&:hover": { bgcolor: "#374151", boxShadow: "none" },
+                transition: "all 0.2s ease",
+              }}
+            >
+              Check in
+            </Button>
+          )}
         </Box>
       </CardContent>
     </Card>
