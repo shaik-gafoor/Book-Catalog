@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   AppBar,
   Avatar,
@@ -25,53 +25,223 @@ import {
 } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { navigationItems } from "./navigationItems";
+import {
+  clearAuthSession,
+  getAuthSessionStartedAt,
+  getAuthUser,
+  getLatestBooks,
+  getActiveSubscription,
+  getNotificationState,
+  setNotificationState,
+} from "../../api/libraryApi";
 
 const drawerWidth = 240;
-
-const user = {
-  fullName: "John Doe",
-  profilePicture: null,
-};
 
 const isActive = (path, location) => {
   if (path === "/") return location?.pathname === "/";
   return location?.pathname.startsWith(path);
 };
 
+const getDisplayName = (user) => {
+  if (!user) return "Guest";
+  return user.fullName || user.name || user.username || user.email || "Guest";
+};
+
+const getInitials = (user) => {
+  const displayName = getDisplayName(user);
+  const parts = displayName.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "G";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+};
+
+const getGreetingLabel = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+};
+
+const formatRelativeTime = (timestamp) => {
+  const diffMinutes = Math.max(1, Math.floor((Date.now() - timestamp) / 60000));
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`;
+  }
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  }
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+};
+
 const Navbar = ({ handleDrawerToggle }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [user] = useState(() => getAuthUser());
+  const [sessionStartedAt] = useState(
+    () => getAuthSessionStartedAt() || Date.now(),
+  );
+
+  const [notifications, setNotifications] = useState(() => {
+    const stored = getNotificationState();
+    return Array.isArray(stored?.items) ? stored.items : [];
+  });
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [anchorEl, setAnchorEl] = useState(null);
   const [notifAnchor, setNotifAnchor] = useState(null);
 
+  const pushNotification = (text, meta = {}) => {
+    setNotifications((current) => {
+      const next = [
+        {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          text,
+          time: meta.time || formatRelativeTime(Date.now()),
+          unread: true,
+          createdAt: Date.now(),
+          kind: meta.kind || "info",
+        },
+        ...current,
+      ].slice(0, 20);
+      setNotificationState({ items: next });
+      return next;
+    });
+  };
+
+  const markAsRead = (id) => {
+    setNotifications((current) => {
+      const next = current.map((item) =>
+        item.id === id ? { ...item, unread: false } : item,
+      );
+      setNotificationState({ items: next });
+      return next;
+    });
+  };
+
+  const unreadCount = notifications.filter((n) => n.unread).length;
+
   const currentPage =
     navigationItems.find((item) => isActive(item.path, location))?.title ||
     "Dashboard";
 
-  const notifications = [
-    {
-      id: 1,
-      text: "Your loan for 'Atomic Habits' is due in 2 days",
-      time: "2h ago",
-      unread: true,
-    },
-    {
-      id: 2,
-      text: "Reservation for 'Deep Work' is ready for pickup",
-      time: "5h ago",
-      unread: true,
-    },
-    {
-      id: 3,
-      text: "New books added to your wishlist category",
-      time: "1d ago",
-      unread: false,
-    },
-  ];
-  const unreadCount = notifications.filter((n) => n.unread).length;
+  useEffect(() => {
+    if (!user) return undefined;
+
+    const greetingKey = `bookCatalogGreetingShown-${user.id || user.email}`;
+    const suggestionKey = `bookCatalogSuggestionShown-${user.id || user.email}`;
+    const latestBookKey = `bookCatalogLatestBook-${user.id || user.email}`;
+    const subscriptionAlertKey = `bookCatalogSubscriptionAlert-${user.id || user.email}`;
+
+    if (!localStorage.getItem(greetingKey)) {
+      pushNotification(
+        `${getGreetingLabel()}, ${getDisplayName(user)}. Welcome back to BookCatalog.`,
+        { kind: "greeting" },
+      );
+      localStorage.setItem(greetingKey, "true");
+    }
+
+    const elapsedMs = Date.now() - sessionStartedAt;
+    const suggestionDelayMs = 2 * 60 * 1000;
+    let suggestionTimer = null;
+
+    const scheduleSuggestion = () => {
+      if (localStorage.getItem(suggestionKey)) {
+        return;
+      }
+
+      const sendSuggestion = async () => {
+        try {
+          const latestBooks = await getLatestBooks({});
+          const latestBook = latestBooks?.content?.[0];
+          const bookTitle = latestBook?.title || "a new book";
+          pushNotification(
+            `Suggested for you: ${bookTitle}. It may be worth checking out next.`,
+            { kind: "suggestion" },
+          );
+        } catch {
+          pushNotification(
+            "Suggested for you: browse the latest books added to the catalog.",
+            { kind: "suggestion" },
+          );
+        } finally {
+          localStorage.setItem(suggestionKey, "true");
+        }
+      };
+
+      if (elapsedMs >= suggestionDelayMs) {
+        sendSuggestion();
+      } else {
+        suggestionTimer = window.setTimeout(
+          sendSuggestion,
+          suggestionDelayMs - elapsedMs,
+        );
+      }
+    };
+
+    const checkDynamicAlerts = async () => {
+      try {
+        const latestBooks = await getLatestBooks({});
+        const latestBook = latestBooks?.content?.[0];
+        if (
+          latestBook?.id &&
+          String(latestBook.id) !== localStorage.getItem(latestBookKey)
+        ) {
+          pushNotification(
+            `New book added: ${latestBook.title} by ${latestBook.author}.`,
+            { kind: "new-book" },
+          );
+          localStorage.setItem(latestBookKey, String(latestBook.id));
+        } else if (latestBook?.id && !localStorage.getItem(latestBookKey)) {
+          localStorage.setItem(latestBookKey, String(latestBook.id));
+        }
+      } catch {
+        // Ignore book polling failures in the navbar.
+      }
+
+      if (user?.id) {
+        try {
+          const subscription = await getActiveSubscription(user.id);
+          const daysRemaining = subscription?.daysRemaining;
+          const isActive =
+            subscription?.isActive ??
+            subscription?.valid ??
+            subscription?.isValid;
+          if (
+            isActive &&
+            typeof daysRemaining === "number" &&
+            daysRemaining <= 3
+          ) {
+            const cacheValue = `${subscription.id || "active"}:${daysRemaining}`;
+            if (localStorage.getItem(subscriptionAlertKey) !== cacheValue) {
+              const statusText =
+                daysRemaining <= 0
+                  ? "Your subscription has expired. Please renew to keep access."
+                  : `Your subscription is ending in ${daysRemaining} day${daysRemaining === 1 ? "" : "s"}.`;
+              pushNotification(statusText, { kind: "subscription" });
+              localStorage.setItem(subscriptionAlertKey, cacheValue);
+            }
+          }
+        } catch {
+          // Ignore subscription polling failures in the navbar.
+        }
+      }
+    };
+
+    checkDynamicAlerts();
+    scheduleSuggestion();
+
+    const interval = window.setInterval(checkDynamicAlerts, 2 * 60 * 1000);
+
+    return () => {
+      if (suggestionTimer) {
+        window.clearTimeout(suggestionTimer);
+      }
+      window.clearInterval(interval);
+    };
+  }, [sessionStartedAt, user]);
 
   return (
     <AppBar
@@ -305,7 +475,7 @@ const Navbar = ({ handleDrawerToggle }) => {
             sx={{ ml: 0.5, p: 0.5 }}
           >
             <Avatar
-              src={user?.profilePicture}
+              src={user?.profilePicture || user?.avatarUrl || user?.photoUrl}
               sx={{
                 width: 34,
                 height: 34,
@@ -315,7 +485,7 @@ const Navbar = ({ handleDrawerToggle }) => {
                 border: "2px solid #e5e7eb",
               }}
             >
-              {user?.fullName?.charAt(0)}
+              {getInitials(user)}
             </Avatar>
           </IconButton>
         </Tooltip>
@@ -343,10 +513,10 @@ const Navbar = ({ handleDrawerToggle }) => {
             <Typography
               sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827" }}
             >
-              {user.fullName}
+              {getDisplayName(user)}
             </Typography>
             <Typography sx={{ fontSize: "0.7rem", color: "#9ca3af" }}>
-              Member
+              {user?.role || user?.userType || "Member"}
             </Typography>
           </Box>
           <MenuItem
@@ -388,7 +558,8 @@ const Navbar = ({ handleDrawerToggle }) => {
           <Divider sx={{ borderColor: "#f3f4f6" }} />
           <MenuItem
             onClick={() => {
-              console.log("logout");
+              clearAuthSession();
+              navigate("/auth");
               setAnchorEl(null);
             }}
             sx={{

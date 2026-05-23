@@ -23,7 +23,7 @@ public class AuthController {
 
     @PostMapping ("/signup")
     public ResponseEntity<AuthResponse> signupHandler(
-            @RequestBody  UserDTO req
+                        @Valid @RequestBody  UserDTO req
             ) throws UserException{
         AuthResponse res = authService.signup(req);
         return ResponseEntity.ok(res);
@@ -37,7 +37,7 @@ public class AuthController {
         return ResponseEntity.ok(res);
     }
 
-    @PostMapping("//forgot-password")
+    @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse> forgotPassword(
             @RequestBody ForgotPasswordRequest request
     ) throws UserException {

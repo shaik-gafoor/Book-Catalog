@@ -17,15 +17,15 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.beans.Transient;
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.UUID;
 
 @Service
@@ -45,13 +45,20 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse login(String username, String password) throws UserException {
-        Authentication authentication = authenticate(username,password);
+        String loginValue = normalizeLogin(username);
+        Authentication authentication = authenticate(loginValue,password);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 //        Collection<? extends GrantedAuthority>authorities = authentication.getAuthorities();
 //        String role = authorities.iterator().next().getAuthority();
         String token = jwtProvider.generateToken(authentication);
 
-        User user = userRepository.findByEmail(username);
+        User user = userRepository.findByEmailIgnoreCase(loginValue == null ? null : loginValue.toLowerCase());
+        if (user == null) {
+            user = userRepository.findByFullNameIgnoreCase(loginValue);
+        }
+        if (user == null) {
+            throw new UserException("user not found with username - " + loginValue);
+        }
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
@@ -65,26 +72,29 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private Authentication authenticate(String username, String password) throws UserException {
-        UserDetails userDetails = customUserServiceImplementation.loadUserByUsername(username);
-        if(userDetails == null){
-            throw new UserException("user not found with email - "+password);
+        UserDetails userDetails;
+        try {
+            userDetails = customUserServiceImplementation.loadUserByUsername(username);
+        } catch (UsernameNotFoundException e) {
+            throw new UserException(e.getMessage());
         }
         if(!passwordEncoder.matches(password,userDetails.getPassword())){
             throw new UserException("password not match");
         }
-        return new UsernamePasswordAuthenticationToken(username,null,userDetails.getAuthorities());
+        return new UsernamePasswordAuthenticationToken(userDetails.getUsername(),null,userDetails.getAuthorities());
     }
 
 
     @Override
     public AuthResponse signup(UserDTO req) throws UserException {
-        User user = userRepository.findByEmail(req.getEmail());
+        String email = normalizeEmail(req.getEmail());
+        User user = userRepository.findByEmailIgnoreCase(email);
 
         if(user != null){
             throw new UserException("Email id already registed");
         }
         User createdUser = new User();
-        createdUser.setEmail(req.getEmail());
+        createdUser.setEmail(email);
         createdUser.setPassword(passwordEncoder.encode(req.getPassword()));
         createdUser.setPhone(req.getPhone());
         createdUser.setFullName(req.getFullName());
@@ -94,7 +104,9 @@ public class AuthServiceImpl implements AuthService {
         User savedUser = userRepository.save(createdUser);
 
         Authentication auth = new UsernamePasswordAuthenticationToken(
-                savedUser.getEmail(),savedUser.getPassword());
+            savedUser.getEmail(),
+            null,
+            AuthorityUtils.createAuthorityList(savedUser.getRole()));
         SecurityContextHolder.getContext().setAuthentication(auth);
 
         String jwt = jwtProvider.generateToken(auth);
@@ -112,7 +124,7 @@ public class AuthServiceImpl implements AuthService {
     public void createPasswordResetToken(String email) throws UserException {
 
         String frontendUrl="";
-        User user = userRepository.findByEmail(email);
+        User user = userRepository.findByEmailIgnoreCase(normalizeEmail(email));
         if(user ==  null){
             throw new UserException("user not found with given email");
         }
@@ -131,6 +143,14 @@ public class AuthServiceImpl implements AuthService {
 
     }
 
+
+        private String normalizeEmail(String email) {
+            return email == null ? null : email.trim().toLowerCase();
+        }
+
+        private String normalizeLogin(String value) {
+            return value == null ? null : value.trim();
+        }
 
 
     @Transactional

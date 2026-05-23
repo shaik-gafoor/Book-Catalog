@@ -70,6 +70,10 @@ public class BookServiceImpl implements BookService {
         Book existingBook = bookRepository.findById(bookId)
                 .orElseThrow(() -> new BookException("Book Not Found!"));
         bookMapper.updateEntityFromDTO(bookDTO,existingBook);
+        if (existingBook.getTotalCopies() != null && existingBook.getAvailableCopies() != null
+                && existingBook.getAvailableCopies() > existingBook.getTotalCopies()) {
+            existingBook.setAvailableCopies(existingBook.getTotalCopies());
+        }
         existingBook.isAvailableCopesValid();
         Book savedBook = bookRepository.save(existingBook);
         return bookMapper.toDTO(savedBook);
@@ -121,6 +125,8 @@ public class BookServiceImpl implements BookService {
     private Pageable createPageable(int page, int size, String sortBy, String sortDirection){
         size = Math.min(size,10);
         size = Math.max(size,1);
+        sortBy = (sortBy == null || sortBy.isBlank()) ? "createdAt" : sortBy;
+        sortDirection = (sortDirection == null || sortDirection.isBlank()) ? "DESC" : sortDirection;
 
         Sort sort = sortDirection.equalsIgnoreCase("ASC")
                 ?Sort.by(sortBy).ascending():Sort.by(sortBy).descending();

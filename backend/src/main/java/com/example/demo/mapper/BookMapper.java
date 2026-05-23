@@ -21,10 +21,11 @@ public class BookMapper {
         return BookDTO.builder()
                 .id(book.getId())
                 .title(book.getTitle())
+                .author(book.getAuthor())
                 .isbn(book.getIsbn())
                 .catalogName(book.getCatalog().getName())
                 .catalogCode(book.getCatalog().getCode())
-                .catalogId(book.getId())
+                .catalogId(book.getCatalog().getId())
                 .publisher(book.getPublisher())
                 .publicationDate(book.getPublisheddate())
                 .language(book.getLanguage())
@@ -76,7 +77,7 @@ public class BookMapper {
         }
 
         book.setTitle(dto.getTitle());
-        book.setAuthor(dto.setAuthor());
+        book.setAuthor(dto.getAuthor());
 
         if (dto.getCatalogId() != null) {
             Catalog catalog = catalogRepository.findById(dto.getCatalogId())
