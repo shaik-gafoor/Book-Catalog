@@ -1,74 +1,62 @@
 import React, { useEffect, useState } from "react";
-import {
-  Alert,
-  Box,
-  CircularProgress,
-  Tab,
-  Tabs,
-  Typography,
-} from "@mui/material";
-import { MenuBook } from "@mui/icons-material";
+import { Box, CircularProgress } from "@mui/material";
 import StatesCard from "./StatesCard";
-import LoanCard from "../MyLoans/LoanCard";
-import MyReservationCard from "../MyReservations/Myreservationcard";
 import {
   getBookStatus,
   getMyBookLoans,
-  getMyReservations,
   getWishlist,
 } from "../../api/libraryApi";
+import {
+  LibraryBooks,
+  BookmarkBorder,
+  Favorite,
+  MenuBook,
+} from "@mui/icons-material";
 
 const Dashboard = () => {
-  const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState({
     totalActiveBooks: 0,
     totalAvailableBooks: 0,
   });
-  const [counts, setCounts] = useState({
-    loans: 0,
-    reservations: 0,
-    wishlist: 0,
+  const [counts, setCounts] = useState({ loans: 0, wishlist: 0 });
+
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  const formattedDate = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
-  const [loans, setLoans] = useState([]);
-  const [reservations, setReservations] = useState([]);
-  const [wishlist, setWishlist] = useState([]);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       setError("");
       try {
-        const [bookStatus, loanData, reservationData, wishlistData] =
-          await Promise.all([
-            getBookStatus(),
-            getMyBookLoans({ page: 0, size: 5 }),
-            getMyReservations({ page: 0, size: 5 }),
-            getWishlist({ page: 0, size: 5 }),
-          ]);
+        const [bookStatus, loanData, wishlistData] = await Promise.all([
+          getBookStatus(),
+          getMyBookLoans({ page: 0, size: 5 }),
+          getWishlist({ page: 0, size: 5 }),
+        ]);
         setStatus(
           bookStatus || { totalActiveBooks: 0, totalAvailableBooks: 0 },
         );
         setCounts({
           loans: loanData?.totalElements ?? loanData?.content?.length ?? 0,
-          reservations:
-            reservationData?.totalElements ??
-            reservationData?.content?.length ??
-            0,
           wishlist:
             wishlistData?.totalElements ?? wishlistData?.content?.length ?? 0,
         });
-        setLoans(loanData?.content || []);
-        setReservations(reservationData?.content || []);
-        setWishlist(wishlistData?.content || []);
       } catch (err) {
         setError(err.message || "Failed to load dashboard");
       } finally {
         setLoading(false);
       }
     };
-
     load();
   }, []);
 
@@ -78,131 +66,219 @@ const Dashboard = () => {
       title: "Active Books",
       subtitle: "Available in catalog",
       value: status.totalActiveBooks || 0,
-      icon: <MenuBook sx={{ fontSize: 26, color: "#374151" }} />,
-      bgColor: "bg-gray-100",
-      textColor: "text-gray-900",
-      borderColor: "border-gray-200",
+      icon: <LibraryBooks sx={{ fontSize: 22, color: "#5F5E5A" }} />,
     },
     {
       id: "available-books",
-      title: "Available Books",
+      title: "Available Now",
       subtitle: "Ready to borrow",
       value: status.totalAvailableBooks || 0,
-      icon: <MenuBook sx={{ fontSize: 26, color: "#374151" }} />,
-      bgColor: "bg-gray-100",
-      textColor: "text-gray-900",
-      borderColor: "border-gray-200",
+      icon: <MenuBook sx={{ fontSize: 22, color: "#5F5E5A" }} />,
     },
     {
       id: "loans",
       title: "My Loans",
       subtitle: "Current checkouts",
       value: counts.loans,
-      icon: <MenuBook sx={{ fontSize: 26, color: "#374151" }} />,
-      bgColor: "bg-gray-100",
-      textColor: "text-gray-900",
-      borderColor: "border-gray-200",
+      icon: <BookmarkBorder sx={{ fontSize: 22, color: "#5F5E5A" }} />,
     },
     {
       id: "wishlist",
       title: "Wishlist",
       subtitle: "Saved titles",
       value: counts.wishlist,
-      icon: <MenuBook sx={{ fontSize: 26, color: "#374151" }} />,
-      bgColor: "bg-gray-100",
-      textColor: "text-gray-900",
-      borderColor: "border-gray-200",
+      icon: <Favorite sx={{ fontSize: 22, color: "#5F5E5A" }} />,
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 px-6 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-          Dashboard
-        </h1>
-        <p className="mt-1.5 text-sm text-gray-500 max-w-lg">
-          Live library overview pulled from the backend.
-        </p>
-      </div>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {stats.map((item) => (
-          <StatesCard key={item.id} {...item} />
-        ))}
-      </div>
-
-      {loading ? (
-        <Box sx={{ py: 8, display: "flex", justifyContent: "center" }}>
-          <CircularProgress size={28} />
-        </Box>
-      ) : (
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mt-6">
-          <Box sx={{ borderBottom: 1, borderColor: "#f3f4f6", px: 2 }}>
-            <Tabs
-              value={tabValue}
-              onChange={(_, newValue) => setTabValue(newValue)}
-              sx={{
-                "& .MuiTab-root": {
-                  fontSize: "0.8rem",
-                  fontWeight: 500,
-                  color: "#6b7280",
-                  textTransform: "none",
-                  minHeight: 44,
-                  px: 1.5,
-                },
-                "& .MuiTab-root.Mui-selected": {
-                  color: "#111827",
-                  fontWeight: 600,
-                },
-                "& .MuiTabs-indicator": {
-                  backgroundColor: "#1a1a1a",
-                  height: 2,
-                },
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        background: "#faf9f6",
+        overflow: "hidden",
+      }}
+    >
+      {/* ── Expanded Hero Image (45% Height) ── */}
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "65%",
+          flexShrink: 0,
+          overflow: "hidden",
+        }}
+      >
+        <img
+          src="/dashoardimage.jpg"
+          alt="Library shelves"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center center",
+            display: "block",
+          }}
+        />
+        {/* Overlay */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(10,10,8,0.52)",
+          }}
+        />
+        {/* Text */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+            padding: "0 40px",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "10px",
+              color: "rgba(255,255,255,0.48)",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              marginBottom: "8px",
+              fontWeight: 400,
+            }}
+          >
+            {formattedDate}
+          </p>
+          <h1
+            style={{
+              fontFamily:
+                "'Playfair Display', 'DM Serif Display', Georgia, serif",
+              fontSize: "clamp(18px, 2.2vw, 32px)",
+              fontWeight: 400,
+              color: "#ffffff",
+              lineHeight: 1.3,
+              maxWidth: "560px",
+              margin: "0 0 8px",
+            }}
+          >
+            "A reader lives a thousand lives before he dies."
+          </h1>
+          <p
+            style={{
+              fontSize: "12px",
+              color: "rgba(255,255,255,0.45)",
+              fontStyle: "italic",
+              fontWeight: 300,
+              marginBottom: "14px",
+            }}
+          >
+            — George R.R. Martin
+          </p>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "5px",
+              background: "rgba(255,255,255,0.1)",
+              border: "0.5px solid rgba(255,255,255,0.2)",
+              borderRadius: "999px",
+              padding: "5px 18px",
+              fontSize: "11px",
+              color: "rgba(255,255,255,0.72)",
+              fontWeight: 300,
+            }}
+          >
+            {greeting},{" "}
+            <em
+              style={{
+                fontStyle: "italic",
+                color: "#fff",
+                fontFamily: "'Playfair Display', Georgia, serif",
               }}
             >
-              <Tab label="Current Loans" />
-              <Tab label="Reservations" />
-            </Tabs>
-          </Box>
-
-          <div className="p-6 space-y-4">
-            {tabValue === 0 && (
-              <>
-                {loans.length > 0 ? (
-                  loans.map((loan) => <LoanCard key={loan.id} loan={loan} />)
-                ) : (
-                  <Typography sx={{ color: "#9ca3af", fontSize: "0.875rem" }}>
-                    No active loans found.
-                  </Typography>
-                )}
-              </>
-            )}
-            {tabValue === 1 && (
-              <>
-                {reservations.length > 0 ? (
-                  reservations.map((reservation) => (
-                    <MyReservationCard
-                      key={reservation.id}
-                      reservation={reservation}
-                    />
-                  ))
-                ) : (
-                  <Typography sx={{ color: "#9ca3af", fontSize: "0.875rem" }}>
-                    No reservations found.
-                  </Typography>
-                )}
-              </>
-            )}
+              Reader
+            </em>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* ── Cards Area (Flushed Top Alignment) ── */}
+      <div
+        style={{
+          width: "100%",
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent:
+            "flex-start" /* Pulls cards right up against the image boundary */,
+          padding: "24px 28px",
+          background: "#faf9f6",
+          overflow: "hidden",
+        }}
+      >
+        {error && (
+          <div
+            style={{
+              marginBottom: "12px",
+              padding: "10px 16px",
+              borderRadius: "12px",
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              fontSize: "13px",
+              color: "#b91c1c",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              flex: 1,
+            }}
+          >
+            <CircularProgress size={24} sx={{ color: "#2d5a3d" }} />
+          </Box>
+        ) : (
+          <>
+            <p
+              style={{
+                fontSize: "10px",
+                textTransform: "uppercase",
+                letterSpacing: "0.13em",
+                color: "#aaa9a2",
+                fontWeight: 500,
+                marginBottom: "14px",
+                marginTop: "4px",
+              }}
+            >
+              Your library at a glance
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                gap: "16px",
+              }}
+            >
+              {stats.map((item) => (
+                <StatesCard key={item.id} {...item} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 };

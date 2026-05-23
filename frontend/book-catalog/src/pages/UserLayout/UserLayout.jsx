@@ -14,7 +14,15 @@ const UserLayout = () => {
   };
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "#f9fafb" }}>
+    <Box
+      sx={{
+        display: "flex",
+        height: "100vh",
+        width: "100vw",
+        overflow: "hidden",
+        bgcolor: "#f9fafb",
+      }}
+    >
       {/* Navbar */}
       <Navbar handleDrawerToggle={handleDrawerToggle} />
 
@@ -24,19 +32,24 @@ const UserLayout = () => {
         handleDrawerToggle={handleDrawerToggle}
       />
 
-      {/* Main content */}
+      {/* Main content wrapper */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          minHeight: "100vh",
+          height: "100vh",
+          display: "flex",
+          flexDirection: "column",
           bgcolor: "#f9fafb",
+          overflow: "hidden",
         }}
       >
         {/* Offset for fixed AppBar */}
-        <Toolbar sx={{ minHeight: "60px !important" }} />
-        <Box sx={{ p: 3 }}>
+        <Toolbar sx={{ minHeight: "60px !important", flexShrink: 0 }} />
+
+        {/* Strictly confined content viewport */}
+        <Box sx={{ flexGrow: 1, height: "calc(100vh - 60px)", width: "100%" }}>
           <Outlet />
         </Box>
       </Box>
