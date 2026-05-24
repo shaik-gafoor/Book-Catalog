@@ -11,7 +11,7 @@ import {
 } from "@mui/icons-material";
 import { updateBook } from "../../api/libraryApi";
 
-/* ── shared token object so values stay DRY ── */
+/* ── shared tokens ── */
 const T = {
   sand: "#f7f6f3",
   white: "#ffffff",
@@ -23,9 +23,22 @@ const T = {
   faint: "#a8a29e",
   light: "#f5f4f1",
   indigo: "#6366f1",
-  radius: "12px",
+  radius: "14px",
   radiusSm: "8px",
 };
+
+/* ── keyframes (injected once) ── */
+if (typeof document !== "undefined" && !document.getElementById("bc-kf")) {
+  const s = document.createElement("style");
+  s.id = "bc-kf";
+  s.textContent = `
+    @keyframes bcFadeUp {
+      from { opacity:0; transform:translateY(14px) scale(0.97); }
+      to   { opacity:1; transform:translateY(0)    scale(1);    }
+    }
+  `;
+  document.head.appendChild(s);
+}
 
 const buildEditState = (book) => ({
   title: book.title || "",
@@ -39,12 +52,95 @@ const buildEditState = (book) => ({
   coverImagesUrl: book.coverImagesUrl || book.coverImageUrl || "",
 });
 
+/* ── status badge ── */
+const AvailBadge = ({ available }) => (
+  <span
+    style={{
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: "0.06em",
+      textTransform: "uppercase",
+      padding: "3px 10px",
+      borderRadius: 20,
+      border: "1px solid transparent",
+      background: available ? "#d1fae5" : "#fef3c7",
+      color: available ? "#065f46" : "#92400e",
+      borderColor: available ? "#a7f3d0" : "#fde68a",
+    }}
+  >
+    {available ? "Available" : "Checked Out"}
+  </span>
+);
+
+/* ── action button ── */
+const Btn = ({
+  variant = "outline",
+  onClick,
+  disabled,
+  children,
+  style: extra,
+}) => {
+  const [hov, setHov] = useState(false);
+  const base = {
+    fontFamily: "inherit",
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: "0.05em",
+    padding: "7px 14px",
+    borderRadius: T.radiusSm,
+    cursor: disabled ? "not-allowed" : "pointer",
+    border: "1px solid transparent",
+    whiteSpace: "nowrap",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
+    opacity: disabled ? 0.4 : 1,
+    transition: "background 0.15s, transform 0.12s",
+    transform: hov && !disabled ? "translateY(-1px)" : "none",
+  };
+  const variants = {
+    ghost: {
+      ...base,
+      background: hov ? T.border : T.light,
+      color: T.text2,
+      borderColor: T.border,
+    },
+    outline: {
+      ...base,
+      background: hov ? T.light : "transparent",
+      color: T.text2,
+      borderColor: T.border2,
+    },
+    solid: {
+      ...base,
+      background: hov ? "#2d2926" : T.text,
+      color: T.white,
+      borderColor: T.text,
+    },
+  };
+  return (
+    <button
+      style={{ ...variants[variant], ...extra }}
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+    >
+      {children}
+    </button>
+  );
+};
+
+/* ══════════════════════════════════════════════════
+   BOOK CARD
+══════════════════════════════════════════════════ */
 const BookCard = ({
   book,
   onReserve,
   onWishlist,
   onCheckout,
   onBookUpdated,
+  animIndex = 0,
 }) => {
   const [open, setOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -69,15 +165,15 @@ const BookCard = ({
   };
 
   const handleEditChange = (field) => (e) => {
-    const value = e.target.value;
-    setEditForm((prev) => ({
-      ...prev,
-      [field]: value,
-      ...(field === "totalCopies" && Number.isFinite(Number(value))
+    const v = e.target.value;
+    setEditForm((p) => ({
+      ...p,
+      [field]: v,
+      ...(field === "totalCopies" && Number.isFinite(Number(v))
         ? {
             availableCopies: Math.min(
-              Number(prev.availableCopies || 0),
-              Number(value),
+              Number(p.availableCopies || 0),
+              Number(v),
             ),
           }
         : null),
@@ -102,10 +198,7 @@ const BookCard = ({
         description: editForm.description.trim(),
         totalCopies: Number(editForm.totalCopies),
         availableCopies: Number(editForm.availableCopies),
-        price:
-          editForm.price === "" || editForm.price === null
-            ? null
-            : Number(editForm.price),
+        price: editForm.price === "" ? null : Number(editForm.price),
         coverImagesUrl: editForm.coverImagesUrl.trim(),
         active: book.active ?? true,
       };
@@ -123,120 +216,80 @@ const BookCard = ({
     onWishlist?.(book);
   };
 
-  /* ── inline style helpers ── */
-  const cardStyle = {
-    background: T.white,
-    border: `1px solid ${hovered ? T.border2 : T.border}`,
-    borderRadius: T.radius,
-    overflow: "hidden",
-    cursor: "pointer",
-    display: "flex",
-    flexDirection: "column",
-    height: "100%",
-    transition:
-      "box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease",
-    boxShadow: hovered
-      ? "0 8px 40px rgba(0,0,0,0.11)"
-      : "0 2px 8px rgba(0,0,0,0.04)",
-    transform: hovered ? "translateY(-4px)" : "translateY(0)",
-  };
-  const badgeStyle = (avail) => ({
-    fontSize: 10,
-    fontWeight: 600,
-    letterSpacing: "0.06em",
-    textTransform: "uppercase",
-    padding: "3px 9px",
-    borderRadius: 20,
-    border: "1px solid transparent",
-    background: avail ? "#d1fae5" : "#fef3c7",
-    color: avail ? "#065f46" : "#92400e",
-    borderColor: avail ? "#a7f3d0" : "#fde68a",
-  });
-  const btnStyle = (variant) => {
-    const base = {
-      fontFamily: "inherit",
-      fontSize: 11,
-      fontWeight: 600,
-      letterSpacing: "0.05em",
-      padding: "6px 13px",
-      borderRadius: T.radiusSm,
-      cursor: "pointer",
-      border: "1px solid transparent",
-      whiteSpace: "nowrap",
-      transition: "background 0.15s, transform 0.12s",
-      display: "inline-flex",
-      alignItems: "center",
-    };
-    if (variant === "ghost")
-      return {
-        ...base,
-        background: T.light,
-        color: T.text2,
-        borderColor: T.border,
-      };
-    if (variant === "outline")
-      return {
-        ...base,
-        background: "transparent",
-        color: T.text2,
-        borderColor: T.border2,
-      };
-    if (variant === "solid")
-      return {
-        ...base,
-        background: T.text,
-        color: T.white,
-        borderColor: T.text,
-      };
-    if (variant === "disabled")
-      return {
-        ...base,
-        background: T.light,
-        color: T.faint,
-        opacity: 0.5,
-        cursor: "not-allowed",
-      };
-    return base;
-  };
-  const statBoxStyle = {
-    background: T.white,
-    border: `1px solid ${T.border}`,
-    borderRadius: 10,
-    padding: "12px 14px",
-  };
-  const labelStyle = {
-    fontFamily: "inherit",
-    fontSize: 10,
-    fontWeight: 600,
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    color: T.faint,
-    marginBottom: 4,
-  };
+  /* ── stat box used in dialog ── */
+  const StatBox = ({ label, val }) => (
+    <div
+      style={{
+        background: T.white,
+        border: `1px solid ${T.border}`,
+        borderRadius: 10,
+        padding: "12px 14px",
+      }}
+    >
+      <p
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: T.faint,
+          marginBottom: 4,
+        }}
+      >
+        {label}
+      </p>
+      <p
+        style={{
+          fontFamily: "'Playfair Display', serif",
+          fontSize: 18,
+          fontWeight: 600,
+          color: T.text,
+        }}
+      >
+        {val}
+      </p>
+    </div>
+  );
 
   return (
     <>
-      {/* ── Card ── */}
+      {/* ════════════ CARD ════════════ */}
       <div
-        style={cardStyle}
-        onClick={openDialog}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
         role="button"
         tabIndex={0}
+        onClick={openDialog}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             openDialog();
           }
         }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          background: T.white,
+          border: `1px solid ${hovered ? T.border2 : T.border}`,
+          borderRadius: T.radius,
+          overflow: "hidden",
+          cursor: "pointer",
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          boxShadow: hovered
+            ? "0 10px 36px rgba(0,0,0,0.10)"
+            : "0 1px 4px rgba(0,0,0,0.04)",
+          transform: hovered ? "translateY(-4px)" : "translateY(0)",
+          transition:
+            "box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease",
+          animation: `bcFadeUp 0.38s ease ${Math.min(animIndex * 0.05, 0.45)}s both`,
+        }}
       >
         {/* Cover */}
         <div
           style={{
             position: "relative",
-            height: 160,
-            background: "linear-gradient(135deg,#f7f6f3,#ece9e3)",
+            height: 164,
+            background: "linear-gradient(135deg,#f0eeeb,#e8e4df)",
             overflow: "hidden",
             flexShrink: 0,
           }}
@@ -250,7 +303,7 @@ const BookCard = ({
                 height: "100%",
                 objectFit: "cover",
                 transition: "transform 0.4s ease",
-                transform: hovered ? "scale(1.04)" : "scale(1)",
+                transform: hovered ? "scale(1.05)" : "scale(1)",
               }}
             />
           ) : (
@@ -262,10 +315,10 @@ const BookCard = ({
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 6,
+                gap: 7,
               }}
             >
-              <BookIcon sx={{ fontSize: 40, color: "#c4bfb8" }} />
+              <BookIcon sx={{ fontSize: 42, color: "#c4bfb8" }} />
               <span
                 style={{
                   fontSize: 10,
@@ -278,18 +331,22 @@ const BookCard = ({
               </span>
             </div>
           )}
-          {/* Availability badge */}
-          <span
-            style={{
-              ...badgeStyle(isAvailable),
-              position: "absolute",
-              top: 10,
-              left: 10,
-            }}
-          >
-            {isAvailable ? "Available" : "Checked Out"}
+          {/* Gradient overlay on cover */}
+          {coverUrl && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  "linear-gradient(to top, rgba(0,0,0,0.22) 0%, transparent 50%)",
+              }}
+            />
+          )}
+          {/* Availability */}
+          <span style={{ position: "absolute", top: 10, left: 10 }}>
+            <AvailBadge available={isAvailable} />
           </span>
-          {/* Wishlist */}
+          {/* Wishlist heart */}
           <button
             onClick={handleWishlist}
             aria-label="Wishlist"
@@ -297,20 +354,21 @@ const BookCard = ({
               position: "absolute",
               top: 10,
               right: 10,
-              width: 30,
-              height: 30,
-              background: "rgba(255,255,255,0.9)",
-              backdropFilter: "blur(4px)",
-              border: `1px solid ${T.border}`,
+              width: 32,
+              height: 32,
               borderRadius: "50%",
+              background: wishlisted ? "#fee2e2" : "rgba(255,255,255,0.92)",
+              backdropFilter: "blur(4px)",
+              border: `1px solid ${wishlisted ? "#fca5a5" : T.border}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
+              transition: "background 0.15s, border-color 0.15s",
             }}
           >
             {wishlisted ? (
-              <Bookmark sx={{ fontSize: 15, color: T.indigo }} />
+              <Bookmark sx={{ fontSize: 15, color: "#ef4444" }} />
             ) : (
               <BookmarkBorder sx={{ fontSize: 15, color: T.muted }} />
             )}
@@ -334,7 +392,6 @@ const BookCard = ({
               textTransform: "uppercase",
               color: T.indigo,
               marginBottom: 5,
-              display: "block",
             }}
           >
             {catalogName}
@@ -346,7 +403,7 @@ const BookCard = ({
               fontWeight: 600,
               color: T.text,
               lineHeight: 1.35,
-              marginBottom: 5,
+              marginBottom: 6,
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
@@ -360,28 +417,24 @@ const BookCard = ({
               fontSize: 12,
               color: T.faint,
               marginBottom: 4,
-              whiteSpace: "nowrap",
+              display: "flex",
+              alignItems: "center",
+              gap: 3,
               overflow: "hidden",
               textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
-            <PersonIcon
-              sx={{
-                fontSize: 12,
-                color: T.faint,
-                mr: "3px",
-                verticalAlign: "middle",
-              }}
-            />
+            <PersonIcon sx={{ fontSize: 12, color: T.faint }} />
             {book.author}
           </p>
           {book.addedByName && (
-            <p style={{ fontSize: 10, color: T.faint, marginBottom: 10 }}>
+            <p style={{ fontSize: 10, color: T.faint, marginBottom: 8 }}>
               Added by {book.addedByName}
             </p>
           )}
 
-          {/* Actions */}
+          {/* Action buttons */}
           <div
             style={{
               display: "flex",
@@ -394,38 +447,38 @@ const BookCard = ({
             onClick={(e) => e.stopPropagation()}
           >
             {onWishlist && (
-              <button style={btnStyle("ghost")} onClick={handleWishlist}>
+              <Btn variant="ghost" onClick={handleWishlist}>
                 {wishlisted ? "Wishlisted" : "Wishlist"}
-              </button>
+              </Btn>
             )}
             {onReserve && (
-              <button
-                style={btnStyle("outline")}
+              <Btn
+                variant="outline"
                 onClick={(e) => {
                   e.stopPropagation();
                   onReserve(book);
                 }}
               >
                 Reserve
-              </button>
+              </Btn>
             )}
             {onCheckout && (
-              <button
-                style={isAvailable ? btnStyle("solid") : btnStyle("disabled")}
+              <Btn
+                variant={isAvailable ? "solid" : "ghost"}
+                disabled={!isAvailable}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (isAvailable) onCheckout(book);
                 }}
-                disabled={!isAvailable}
               >
                 Checkout
-              </button>
+              </Btn>
             )}
           </div>
         </div>
       </div>
 
-      {/* ── Detail / Edit Dialog ── */}
+      {/* ════════════ DIALOG ════════════ */}
       <Dialog
         open={open}
         onClose={closeDialog}
@@ -437,7 +490,7 @@ const BookCard = ({
             borderRadius: 16,
             overflow: "hidden",
             border: `1px solid ${T.border}`,
-            boxShadow: "0 8px 40px rgba(0,0,0,0.13)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.14)",
           },
         }}
       >
@@ -446,7 +499,8 @@ const BookCard = ({
           style={{
             position: "relative",
             height: 200,
-            background: "linear-gradient(135deg,#f7f6f3,#ece9e3)",
+            background: "linear-gradient(135deg,#f0eeeb,#e8e4df)",
+            flexShrink: 0,
           }}
         >
           {coverUrl ? (
@@ -465,7 +519,7 @@ const BookCard = ({
                 justifyContent: "center",
               }}
             >
-              <BookIcon sx={{ fontSize: 56, color: "#d1cfc8" }} />
+              <BookIcon sx={{ fontSize: 60, color: "#d1cfc8" }} />
             </div>
           )}
           <div
@@ -473,15 +527,13 @@ const BookCard = ({
               position: "absolute",
               inset: 0,
               background:
-                "linear-gradient(to top, rgba(0,0,0,0.18), transparent 50%)",
+                "linear-gradient(to top, rgba(0,0,0,0.2), transparent 55%)",
               padding: 12,
               display: "flex",
               alignItems: "flex-start",
             }}
           >
-            <span style={badgeStyle(isAvailable)}>
-              {isAvailable ? "Available" : "Checked Out"}
-            </span>
+            <AvailBadge available={isAvailable} />
           </div>
           <button
             onClick={closeDialog}
@@ -490,8 +542,8 @@ const BookCard = ({
               position: "absolute",
               top: 12,
               right: 12,
-              width: 32,
-              height: 32,
+              width: 34,
+              height: 34,
               background: "rgba(255,255,255,0.92)",
               backdropFilter: "blur(4px)",
               border: `1px solid ${T.border}`,
@@ -510,7 +562,7 @@ const BookCard = ({
         <DialogContent style={{ padding: "20px 22px", background: T.sand }}>
           {!isEditing ? (
             <>
-              {/* Header */}
+              {/* Title block */}
               <div style={{ marginBottom: 16 }}>
                 <span
                   style={{
@@ -526,23 +578,24 @@ const BookCard = ({
                 <h2
                   style={{
                     fontFamily: "'Playfair Display',serif",
-                    fontSize: 20,
+                    fontSize: 21,
                     fontWeight: 600,
                     color: T.text,
-                    margin: "4px 0",
+                    margin: "4px 0 3px",
                   }}
                 >
                   {book.title}
                 </h2>
-                <p style={{ fontSize: 13, color: T.faint }}>
-                  <PersonIcon
-                    sx={{
-                      fontSize: 13,
-                      color: T.faint,
-                      mr: "4px",
-                      verticalAlign: "middle",
-                    }}
-                  />
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: T.faint,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  <PersonIcon sx={{ fontSize: 13, color: T.faint }} />
                   {book.author}
                 </p>
               </div>
@@ -556,31 +609,40 @@ const BookCard = ({
                   marginBottom: 12,
                 }}
               >
-                {[
-                  { label: "Available Copies", val: book.availableCopies ?? 0 },
-                  { label: "Total Copies", val: book.totalCopies ?? 0 },
-                  { label: "Pages", val: book.pages || "—" },
-                  { label: "Price", val: book.price ? `₹${book.price}` : "—" },
-                ].map(({ label, val }) => (
-                  <div key={label} style={statBoxStyle}>
-                    <p style={labelStyle}>{label}</p>
-                    <p
-                      style={{
-                        fontFamily: "'Playfair Display',serif",
-                        fontSize: 18,
-                        fontWeight: 600,
-                        color: T.text,
-                      }}
-                    >
-                      {val}
-                    </p>
-                  </div>
-                ))}
+                <StatBox
+                  label="Available Copies"
+                  val={book.availableCopies ?? 0}
+                />
+                <StatBox label="Total Copies" val={book.totalCopies ?? 0} />
+                <StatBox label="Pages" val={book.pages || "—"} />
+                <StatBox
+                  label="Price"
+                  val={book.price ? `₹${book.price}` : "—"}
+                />
               </div>
 
               {/* Description */}
-              <div style={{ ...statBoxStyle, marginBottom: 12 }}>
-                <p style={labelStyle}>Description</p>
+              <div
+                style={{
+                  background: T.white,
+                  border: `1px solid ${T.border}`,
+                  borderRadius: 10,
+                  padding: "14px 16px",
+                  marginBottom: 12,
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: T.faint,
+                    marginBottom: 6,
+                  }}
+                >
+                  Description
+                </p>
                 <p style={{ fontSize: 13, color: T.text2, lineHeight: 1.65 }}>
                   {book.description || "No description available."}
                 </p>
@@ -598,7 +660,7 @@ const BookCard = ({
                 {[
                   book.addedByName && `Added by ${book.addedByName}`,
                   book.publisher,
-                  isAvailable ? "Available now" : "Currently checked out",
+                  isAvailable ? "Available now" : "Checked out",
                 ]
                   .filter(Boolean)
                   .map((tag) => (
@@ -619,7 +681,7 @@ const BookCard = ({
                   ))}
               </div>
 
-              {/* Actions */}
+              {/* Dialog actions */}
               <div
                 style={{
                   display: "flex",
@@ -630,69 +692,49 @@ const BookCard = ({
                   gap: 8,
                 }}
               >
-                <button
-                  style={btnStyle("ghost")}
-                  onClick={() => setIsEditing(true)}
-                >
-                  <Edit
-                    sx={{ fontSize: 14, mr: "4px", verticalAlign: "middle" }}
-                  />
+                <Btn variant="ghost" onClick={() => setIsEditing(true)}>
+                  <Edit sx={{ fontSize: 14 }} />
                   Edit
-                </button>
+                </Btn>
                 <div style={{ display: "flex", gap: 8 }}>
                   {onWishlist && (
-                    <button
-                      style={btnStyle("outline")}
-                      onClick={() => onWishlist(book)}
-                    >
+                    <Btn variant="outline" onClick={() => onWishlist(book)}>
                       Wishlist
-                    </button>
+                    </Btn>
                   )}
                   {onReserve && (
-                    <button
-                      style={btnStyle("outline")}
-                      onClick={() => onReserve(book)}
-                    >
+                    <Btn variant="outline" onClick={() => onReserve(book)}>
                       Reserve
-                    </button>
+                    </Btn>
                   )}
                   {onCheckout && (
-                    <button
-                      style={
-                        isAvailable ? btnStyle("solid") : btnStyle("disabled")
-                      }
+                    <Btn
+                      variant={isAvailable ? "solid" : "ghost"}
+                      disabled={!isAvailable}
                       onClick={() => {
                         if (isAvailable) onCheckout(book);
                       }}
-                      disabled={!isAvailable}
                     >
-                      <AutoStories
-                        sx={{
-                          fontSize: 14,
-                          mr: "4px",
-                          verticalAlign: "middle",
-                        }}
-                      />
+                      <AutoStories sx={{ fontSize: 14 }} />
                       Checkout
-                    </button>
+                    </Btn>
                   )}
                 </div>
               </div>
             </>
           ) : (
             <>
-              <div style={{ marginBottom: 16 }}>
-                <h2
-                  style={{
-                    fontFamily: "'Playfair Display',serif",
-                    fontSize: 18,
-                    fontWeight: 600,
-                    color: T.text,
-                  }}
-                >
-                  Edit Book
-                </h2>
-              </div>
+              <h2
+                style={{
+                  fontFamily: "'Playfair Display',serif",
+                  fontSize: 18,
+                  fontWeight: 600,
+                  color: T.text,
+                  marginBottom: 16,
+                }}
+              >
+                Edit Book
+              </h2>
               <div
                 style={{
                   display: "grid",
@@ -763,19 +805,12 @@ const BookCard = ({
                   borderTop: `1px solid ${T.border}`,
                 }}
               >
-                <button
-                  style={btnStyle("ghost")}
-                  onClick={() => setIsEditing(false)}
-                >
+                <Btn variant="ghost" onClick={() => setIsEditing(false)}>
                   Cancel
-                </button>
-                <button
-                  style={saving ? btnStyle("disabled") : btnStyle("solid")}
-                  onClick={handleSave}
-                  disabled={saving}
-                >
+                </Btn>
+                <Btn variant="solid" onClick={handleSave} disabled={saving}>
                   {saving ? "Saving…" : "Save Changes"}
-                </button>
+                </Btn>
               </div>
             </>
           )}

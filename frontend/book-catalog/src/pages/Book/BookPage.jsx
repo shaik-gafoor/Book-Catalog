@@ -27,12 +27,12 @@ const T = {
   faint: "#a8a29e",
   light: "#f5f4f1",
   indigo: "#6366f1",
-  radius: "12px",
+  radius: "14px",
   radiusSm: "8px",
 };
 
-/* ── Filter sidebar pill button ── */
-const FilterBtn = ({ active, onClick, children }) => {
+/* ── Filter sidebar item ── */
+const FilterItem = ({ active, onClick, children }) => {
   const [hov, setHov] = useState(false);
   return (
     <button
@@ -60,6 +60,37 @@ const FilterBtn = ({ active, onClick, children }) => {
     </button>
   );
 };
+
+/* ── Filter card wrapper ── */
+const FilterCard = ({ icon, title, children }) => (
+  <div
+    style={{
+      background: T.white,
+      border: `1px solid ${T.border}`,
+      borderRadius: T.radius,
+      overflow: "hidden",
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+        padding: "11px 14px",
+        borderBottom: `1px solid ${T.border}`,
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+        color: T.text2,
+      }}
+    >
+      {icon}
+      {title}
+    </div>
+    {children}
+  </div>
+);
 
 const BookPage = () => {
   const location = useLocation();
@@ -110,7 +141,7 @@ const BookPage = () => {
           const content = data?.content || data?.value || [];
           collected = collected.concat(content);
           last = Boolean(data?.last);
-          page += 1;
+          page++;
           if (!content.length) break;
         }
         setBooks(collected);
@@ -135,18 +166,18 @@ const BookPage = () => {
     );
   }, [books, searchTerm]);
 
-  const handleWishlist = async (book) => {
+  const handleWishlist = async (b) => {
     try {
-      const r = await addToWishlist(book.id);
+      const r = await addToWishlist(b.id);
       setMessage(r?.message || "Added to wishlist");
     } catch (e) {
       setError(e.message);
     }
   };
-  const handleReserve = async (book) => {
+  const handleReserve = async (b) => {
     try {
       const r = await createReservation({
-        bookId: book.id,
+        bookId: b.id,
         notes: "Reserved from catalog",
       });
       setMessage(r?.message || "Reservation created");
@@ -154,10 +185,10 @@ const BookPage = () => {
       setError(e.message);
     }
   };
-  const handleCheckout = async (book) => {
+  const handleCheckout = async (b) => {
     try {
       const r = await checkoutBook({
-        bookId: book.id,
+        bookId: b.id,
         checkoutDays: 14,
         notes: "Checkout from catalog",
       });
@@ -176,25 +207,6 @@ const BookPage = () => {
     (c) => String(c.id) === String(selectedCatalogId),
   );
 
-  const filterCardStyle = {
-    background: T.white,
-    border: `1px solid ${T.border}`,
-    borderRadius: T.radius,
-    overflow: "hidden",
-  };
-  const filterHeadStyle = {
-    display: "flex",
-    alignItems: "center",
-    gap: 7,
-    padding: "11px 14px 10px",
-    borderBottom: `1px solid ${T.border}`,
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    color: T.text2,
-  };
-
   const SORT_OPTIONS = [
     { val: "createdAt-DESC", label: "Newest First" },
     { val: "createdAt-ASC", label: "Oldest First" },
@@ -209,7 +221,7 @@ const BookPage = () => {
         minHeight: "100vh",
         background: T.sand,
         fontFamily: "'DM Sans',sans-serif",
-        padding: "32px 36px 48px",
+        padding: "32px 36px 56px",
       }}
     >
       {/* Header */}
@@ -270,12 +282,12 @@ const BookPage = () => {
           style={{
             background: "#fef2f2",
             border: "1px solid #fecaca",
-            borderRadius: 8,
+            borderRadius: T.radiusSm,
             padding: "10px 16px",
             fontSize: 12,
+            fontWeight: 500,
             color: "#dc2626",
             marginBottom: 20,
-            fontWeight: 500,
           }}
         >
           {error}
@@ -286,21 +298,21 @@ const BookPage = () => {
           style={{
             background: "#f0fdf4",
             border: "1px solid #bbf7d0",
-            borderRadius: 8,
+            borderRadius: T.radiusSm,
             padding: "10px 16px",
             fontSize: 12,
+            fontWeight: 500,
             color: "#166534",
             marginBottom: 20,
-            fontWeight: 500,
           }}
         >
           {message}
         </div>
       )}
 
-      {/* Layout */}
+      {/* Layout — sidebar + grid */}
       <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 items-start">
-        {/* Sidebar */}
+        {/* ── Sidebar ── */}
         <aside className="flex flex-col gap-3">
           {/* Search */}
           <div style={{ position: "relative" }}>
@@ -322,30 +334,29 @@ const BookPage = () => {
               onBlur={() => setSearchFocused(false)}
               style={{
                 width: "100%",
-                background: T.white,
-                border: `1px solid ${searchFocused ? T.text : T.border}`,
-                borderRadius: T.radiusSm,
-                padding: "10px 12px 10px 36px",
                 fontFamily: "inherit",
                 fontSize: 13,
                 color: T.text,
+                background: T.white,
                 outline: "none",
+                border: `1px solid ${searchFocused ? T.text : T.border}`,
+                borderRadius: T.radiusSm,
+                padding: "10px 12px 10px 36px",
                 boxShadow: searchFocused
-                  ? `0 0 0 3px rgba(28,25,23,0.06)`
+                  ? "0 0 0 3px rgba(28,25,23,0.06)"
                   : "none",
                 transition: "border-color 0.18s, box-shadow 0.18s",
               }}
             />
           </div>
 
-          {/* Catalog filter */}
-          <div style={filterCardStyle}>
-            <div style={filterHeadStyle}>
-              <TuneOutlined sx={{ fontSize: 14, color: T.text2 }} />
-              Catalog
-            </div>
+          {/* Catalog */}
+          <FilterCard
+            icon={<TuneOutlined sx={{ fontSize: 14, color: T.text2 }} />}
+            title="Catalog"
+          >
             {[{ id: "", name: "All Catalogs" }, ...catalogs].map((c) => (
-              <FilterBtn
+              <FilterItem
                 key={c.id}
                 active={String(selectedCatalogId) === String(c.id)}
                 onClick={() => setSelectedCatalogId(c.id)}
@@ -355,6 +366,9 @@ const BookPage = () => {
                   <span
                     style={{
                       fontSize: 10,
+                      borderRadius: 10,
+                      padding: "1px 7px",
+                      fontWeight: 500,
                       background:
                         String(selectedCatalogId) === String(c.id)
                           ? "rgba(255,255,255,0.2)"
@@ -363,64 +377,59 @@ const BookPage = () => {
                         String(selectedCatalogId) === String(c.id)
                           ? T.white
                           : T.faint,
-                      borderRadius: 10,
-                      padding: "1px 7px",
                     }}
                   >
                     {c.bookCount}
                   </span>
                 )}
-              </FilterBtn>
+              </FilterItem>
             ))}
-          </div>
+          </FilterCard>
 
           {/* Availability */}
-          <div style={filterCardStyle}>
-            <div style={filterHeadStyle}>
-              <SortIcon sx={{ fontSize: 14, color: T.text2 }} />
-              Availability
-            </div>
+          <FilterCard
+            icon={<MenuBook sx={{ fontSize: 14, color: T.text2 }} />}
+            title="Availability"
+          >
             {[
               { val: "ALL", label: "All Books" },
               { val: "AVAILABLE", label: "Available Only" },
               { val: "CHECKED_OUT", label: "Checked Out" },
             ].map(({ val, label }) => (
-              <FilterBtn
+              <FilterItem
                 key={val}
                 active={availabilityFilter === val}
                 onClick={() => setAvailabilityFilter(val)}
               >
                 {label}
-              </FilterBtn>
+              </FilterItem>
             ))}
-          </div>
+          </FilterCard>
 
           {/* Sort */}
-          <div style={filterCardStyle}>
-            <div style={filterHeadStyle}>
-              <SortIcon sx={{ fontSize: 14, color: T.text2 }} />
-              Sort By
-            </div>
+          <FilterCard
+            icon={<SortIcon sx={{ fontSize: 14, color: T.text2 }} />}
+            title="Sort By"
+          >
             {SORT_OPTIONS.map(({ val, label }) => {
               const [field, dir] = val.split("-");
-              const active = sortBy === field && sortDirection === dir;
               return (
-                <FilterBtn
+                <FilterItem
                   key={val}
-                  active={active}
+                  active={sortBy === field && sortDirection === dir}
                   onClick={() => {
                     setSortBy(field);
                     setSortDirection(dir);
                   }}
                 >
                   {label}
-                </FilterBtn>
+                </FilterItem>
               );
             })}
-          </div>
+          </FilterCard>
         </aside>
 
-        {/* Main grid */}
+        {/* ── Book grid ── */}
         <main>
           {loading ? (
             <div
@@ -448,22 +457,15 @@ const BookPage = () => {
           ) : filteredBooks.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {filteredBooks.map((book, i) => (
-                <div
+                <BookCard
                   key={book.id}
-                  style={{
-                    opacity: 0,
-                    animation: `fadeUpBook 0.35s ease ${Math.min(i * 0.04, 0.4)}s both`,
-                  }}
-                >
-                  <style>{`@keyframes fadeUpBook { from { opacity:0; transform:translateY(14px) scale(0.98); } to { opacity:1; transform:translateY(0) scale(1); } }`}</style>
-                  <BookCard
-                    book={book}
-                    onWishlist={handleWishlist}
-                    onReserve={handleReserve}
-                    onCheckout={handleCheckout}
-                    onBookUpdated={handleBookUpdated}
-                  />
-                </div>
+                  book={book}
+                  animIndex={i}
+                  onWishlist={handleWishlist}
+                  onReserve={handleReserve}
+                  onCheckout={handleCheckout}
+                  onBookUpdated={handleBookUpdated}
+                />
               ))}
             </div>
           ) : (

@@ -12,7 +12,13 @@ import {
   Shield,
   Star,
 } from "@mui/icons-material";
-import { getProfile, updateProfile } from "../../api/libraryApi";
+import {
+  getProfile,
+  updateProfile,
+  getAuthUser,
+  setAuthSession,
+  getAuthToken,
+} from "../../api/libraryApi";
 
 /* ── tiny helpers ── */
 const getInitials = (name = "") => {
@@ -206,12 +212,25 @@ const ProfilePage = () => {
       const updated = await updateProfile(payload);
       const value = Array.isArray(updated) ? updated[0] : updated;
       // Merge API response with local form + avatar preview so UI stays fresh
-      setProfile((prev) => ({
-        ...prev,
+      const merged = {
+        ...profile,
         ...form,
         ...(value || {}),
         ...(avatarPreview ? { profilePicture: avatarPreview } : {}),
-      }));
+      };
+      setProfile(merged);
+
+      // ── sync navbar avatar: update localStorage then broadcast ──
+      const currentUser = getAuthUser();
+      setAuthSession(getAuthToken(), {
+        ...currentUser,
+        fullName: form.fullName,
+        phone: form.phone,
+        email: form.email,
+        ...(avatarPreview ? { profilePicture: avatarPreview } : {}),
+      });
+      window.dispatchEvent(new Event("storage"));
+
       setEditing(false);
       setAvatarFile(null);
       setSuccess("Profile updated successfully!");
