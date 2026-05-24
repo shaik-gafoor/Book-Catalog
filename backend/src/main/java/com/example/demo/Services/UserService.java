@@ -2,6 +2,7 @@ package com.example.demo.Services;
 
 import com.example.demo.model.User;
 import com.example.demo.payload.dto.UserDTO;
+import com.example.demo.payload.request.UpdateProfileRequest;
 
 import java.util.List;
 
@@ -9,4 +10,5 @@ public interface UserService {
     public User getCurrentUser() throws Exception;
     public List<UserDTO> getAllUsers();
     User findById(Long id) throws Exception;
+    UserDTO updateProfile(String email, UpdateProfileRequest request) throws Exception;
 }

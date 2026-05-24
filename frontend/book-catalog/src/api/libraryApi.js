@@ -7,6 +7,9 @@ const SESSION_STARTED_AT_KEY = "bookCatalogSessionStartedAt";
 const NOTIFICATION_STATE_KEY = "bookCatalogNotificationState";
 const LOCAL_BOOKS_KEY = "bookCatalogLocalBooks";
 
+export const updateProfile = (payload) =>
+  request("/api/users/profile", { method: "PUT", body: payload });
+
 const LOCAL_CATALOGS = [
   { id: "technology", name: "Technology", code: "TECH" },
   { id: "fiction", name: "Fiction", code: "FIC" },
