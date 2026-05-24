@@ -1,98 +1,109 @@
-import React from "react";
-import {
-  FormControl,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  Typography,
-} from "@mui/material";
+import React, { useState } from "react";
 import { TuneOutlined } from "@mui/icons-material";
 
+const T = {
+  white: "#ffffff",
+  border: "#ece9e3",
+  text: "#1c1917",
+  text2: "#44403c",
+  muted: "#78716c",
+  faint: "#a8a29e",
+  light: "#f5f4f1",
+  radius: "12px",
+};
+
 const CatalogFilter = ({ genres = [], selectedGenreId, onGenreSelect }) => {
+  const [hov, setHov] = useState(null);
+
+  const itemStyle = (id) => {
+    const active = selectedGenreId === id || (id === null && !selectedGenreId);
+    const isHov = hov === id;
+    return {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      width: "100%",
+      textAlign: "left",
+      padding: "9px 14px",
+      fontFamily: "inherit",
+      fontSize: 12,
+      fontWeight: active ? 600 : 500,
+      color: active ? T.white : isHov ? T.text2 : T.muted,
+      background: active ? T.text : isHov ? T.light : "transparent",
+      border: "none",
+      cursor: "pointer",
+      transition: "background 0.15s, color 0.15s",
+    };
+  };
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
+    <div
+      style={{
+        background: T.white,
+        border: `1px solid ${T.border}`,
+        borderRadius: T.radius,
+        overflow: "hidden",
+      }}
+    >
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
-        <TuneOutlined sx={{ fontSize: 18, color: "#374151" }} />
-        <Typography
-          sx={{
-            fontSize: "0.8rem",
-            fontWeight: 600,
-            color: "#111827",
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-          }}
-        >
-          Filter by Catalog
-        </Typography>
-      </div>
-
-      {/* All Genres Option */}
       <div
-        className={`flex items-center gap-2 py-2 px-3 mb-1 rounded-lg cursor-pointer transition-all duration-150 ${
-          !selectedGenreId
-            ? "bg-gray-900 text-white"
-            : "hover:bg-gray-50 text-gray-700"
-        }`}
-        onClick={() => onGenreSelect(null)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 7,
+          padding: "11px 14px 10px",
+          borderBottom: `1px solid ${T.border}`,
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: T.text2,
+        }}
       >
-        <span className="text-sm font-medium">All Catalogs</span>
+        <TuneOutlined sx={{ fontSize: 14, color: T.text2 }} />
+        Filter by Catalog
       </div>
 
-      {/* Genre Radio List */}
-      <div className="max-h-96 overflow-y-auto">
-        <FormControl sx={{ width: "100%" }}>
-          <RadioGroup
-            value={selectedGenreId ?? ""}
-            onChange={(e) => onGenreSelect(Number(e.target.value))}
+      {/* All option */}
+      <button
+        style={itemStyle(null)}
+        onClick={() => onGenreSelect(null)}
+        onMouseEnter={() => setHov(null)}
+        onMouseLeave={() => setHov(-1)}
+      >
+        All Catalogs
+      </button>
+
+      {/* Genre list */}
+      <div style={{ maxHeight: 320, overflowY: "auto" }}>
+        {genres.map((genre) => (
+          <button
+            key={genre.id}
+            style={itemStyle(genre.id)}
+            onClick={() => onGenreSelect(genre.id)}
+            onMouseEnter={() => setHov(genre.id)}
+            onMouseLeave={() => setHov(null)}
           >
-            {genres.map((genre) => (
-              <FormControlLabel
-                key={genre.id}
-                value={genre.id}
-                control={
-                  <Radio
-                    size="small"
-                    sx={{
-                      color: "#d1d5db",
-                      "&.Mui-checked": { color: "#1a1a1a" },
-                      p: 0.8,
-                    }}
-                  />
-                }
-                label={
-                  <span
-                    style={{
-                      fontSize: "0.83rem",
-                      color:
-                        selectedGenreId === genre.id ? "#111827" : "#6b7280",
-                      fontWeight: selectedGenreId === genre.id ? 600 : 400,
-                    }}
-                  >
-                    {genre.name}
-                    <span
-                      style={{
-                        marginLeft: 6,
-                        fontSize: "0.7rem",
-                        color: "#9ca3af",
-                      }}
-                    >
-                      ({genre.bookCount})
-                    </span>
-                  </span>
-                }
-                sx={{
-                  mx: 0,
-                  px: 1,
-                  py: 0.3,
-                  borderRadius: "8px",
-                  transition: "background 0.15s",
-                  "&:hover": { bgcolor: "#f9fafb" },
+            <span>{genre.name}</span>
+            {genre.bookCount !== undefined && (
+              <span
+                style={{
+                  fontSize: 10,
+                  borderRadius: 10,
+                  padding: "1px 7px",
+                  fontWeight: 500,
+                  background:
+                    selectedGenreId === genre.id
+                      ? "rgba(255,255,255,0.2)"
+                      : T.light,
+                  color: selectedGenreId === genre.id ? T.white : T.faint,
                 }}
-              />
-            ))}
-          </RadioGroup>
-        </FormControl>
+              >
+                {genre.bookCount}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
     </div>
   );
