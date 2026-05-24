@@ -48,8 +48,16 @@ const UserLayout = () => {
         {/* Offset for fixed AppBar */}
         <Toolbar sx={{ minHeight: "60px !important", flexShrink: 0 }} />
 
-        {/* Strictly confined content viewport */}
-        <Box sx={{ flexGrow: 1, height: "calc(100vh - 60px)", width: "100%" }}>
+        {/* Scrollable content area */}
+        <Box
+          sx={{
+            flexGrow: 1,
+            height: "calc(100vh - 60px)",
+            width: "100%",
+            overflowY: "auto", // ← THE FIX: allow vertical scroll
+            overflowX: "hidden",
+          }}
+        >
           <Outlet />
         </Box>
       </Box>
