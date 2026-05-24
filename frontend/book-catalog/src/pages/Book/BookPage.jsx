@@ -1,19 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  Alert,
-  Box,
-  CircularProgress,
-  FormControl,
-  InputAdornment,
-  InputLabel,
-  MenuItem,
-  Select,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { CircularProgress } from "@mui/material";
 import {
   MenuBook,
   Search as SearchIcon,
+  TuneOutlined,
   Sort as SortIcon,
 } from "@mui/icons-material";
 import { useLocation } from "react-router-dom";
@@ -26,18 +16,49 @@ import {
   getCatalogs,
 } from "../../api/libraryApi";
 
-const inputSx = {
-  "& .MuiOutlinedInput-root": {
-    fontSize: "0.875rem",
-    borderRadius: "10px",
-    color: "#374151",
-    bgcolor: "#ffffff",
-    "& fieldset": { borderColor: "#e5e7eb" },
-    "&:hover fieldset": { borderColor: "#d1d5db" },
-    "&.Mui-focused fieldset": { borderColor: "#1a1a1a", borderWidth: 1 },
-  },
-  "& .MuiInputLabel-root": { fontSize: "0.875rem", color: "#9ca3af" },
-  "& .MuiInputLabel-root.Mui-focused": { color: "#1a1a1a" },
+const T = {
+  sand: "#f7f6f3",
+  white: "#ffffff",
+  border: "#ece9e3",
+  border2: "#e2ddd8",
+  text: "#1c1917",
+  text2: "#44403c",
+  muted: "#78716c",
+  faint: "#a8a29e",
+  light: "#f5f4f1",
+  indigo: "#6366f1",
+  radius: "12px",
+  radiusSm: "8px",
+};
+
+/* ── Filter sidebar pill button ── */
+const FilterBtn = ({ active, onClick, children }) => {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        width: "100%",
+        textAlign: "left",
+        padding: "9px 14px",
+        fontFamily: "inherit",
+        fontSize: 12,
+        fontWeight: active ? 600 : 500,
+        color: active ? T.white : hov ? T.text2 : T.muted,
+        background: active ? T.text : hov ? T.light : "transparent",
+        border: "none",
+        cursor: "pointer",
+        transition: "background 0.15s, color 0.15s",
+      }}
+    >
+      {children}
+    </button>
+  );
 };
 
 const BookPage = () => {
@@ -52,40 +73,30 @@ const BookPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
 
   useEffect(() => {
-    if (location.state?.message) {
-      setMessage(location.state.message);
-    }
+    if (location.state?.message) setMessage(location.state.message);
   }, [location.state]);
 
   useEffect(() => {
-    const loadCatalogs = async () => {
-      try {
-        const data = await getCatalogs();
-        setCatalogs(Array.isArray(data) ? data : data?.content || []);
-      } catch (err) {
-        setError(err.message || "Failed to load catalogs");
-      }
-    };
-
-    loadCatalogs();
+    getCatalogs()
+      .then((d) => setCatalogs(Array.isArray(d) ? d : d?.content || []))
+      .catch((e) => setError(e.message || "Failed to load catalogs"));
   }, []);
 
   useEffect(() => {
-    const loadBooks = async () => {
+    const load = async () => {
       setLoading(true);
       setError("");
       try {
-        const pageSize = 10;
-        let page = 0;
-        let collectedBooks = [];
-        let lastPage = false;
-
-        while (!lastPage) {
+        let page = 0,
+          collected = [],
+          last = false;
+        while (!last) {
           const data = await getBooks({
             page,
-            size: pageSize,
+            size: 10,
             catalogId: selectedCatalogId || undefined,
             availableOnly:
               availabilityFilter === "AVAILABLE"
@@ -96,220 +107,404 @@ const BookPage = () => {
             sortBy,
             sortDirection,
           });
-
           const content = data?.content || data?.value || [];
-          collectedBooks = collectedBooks.concat(content);
-          lastPage = Boolean(data?.last);
+          collected = collected.concat(content);
+          last = Boolean(data?.last);
           page += 1;
-
-          if (!content.length) {
-            break;
-          }
+          if (!content.length) break;
         }
-
-        setBooks(collectedBooks);
-      } catch (err) {
-        setError(err.message || "Failed to load books");
+        setBooks(collected);
+      } catch (e) {
+        setError(e.message || "Failed to load books");
       } finally {
         setLoading(false);
       }
     };
-
-    loadBooks();
+    load();
   }, [selectedCatalogId, availabilityFilter, sortBy, sortDirection]);
 
   const filteredBooks = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    if (!query) return books;
-
-    return books.filter((book) => {
-      return [book.title, book.author, book.description, book.catalogName]
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return books;
+    return books.filter((b) =>
+      [b.title, b.author, b.description, b.catalogName]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
-        .includes(query);
-    });
+        .includes(q),
+    );
   }, [books, searchTerm]);
 
   const handleWishlist = async (book) => {
     try {
-      const res = await addToWishlist(book.id);
-      setMessage(res?.message || "Added to wishlist");
-    } catch (err) {
-      setError(err.message || "Could not add to wishlist");
+      const r = await addToWishlist(book.id);
+      setMessage(r?.message || "Added to wishlist");
+    } catch (e) {
+      setError(e.message);
     }
   };
-
   const handleReserve = async (book) => {
     try {
-      const res = await createReservation({
+      const r = await createReservation({
         bookId: book.id,
         notes: "Reserved from catalog",
       });
-      setMessage(res?.message || "Reservation created");
-    } catch (err) {
-      setError(err.message || "Could not reserve book");
+      setMessage(r?.message || "Reservation created");
+    } catch (e) {
+      setError(e.message);
     }
   };
-
   const handleCheckout = async (book) => {
     try {
-      const res = await checkoutBook({
+      const r = await checkoutBook({
         bookId: book.id,
         checkoutDays: 14,
         notes: "Checkout from catalog",
       });
-      setMessage(res?.message || "Checkout created");
-    } catch (err) {
-      setError(err.message || "Could not checkout book");
+      setMessage(r?.message || "Checkout created");
+    } catch (e) {
+      setError(e.message);
     }
   };
-
-  const handleBookUpdated = (updatedBook) => {
-    if (!updatedBook?.id) return;
-
-    setBooks((currentBooks) =>
-      currentBooks.map((book) =>
-        String(book.id) === String(updatedBook.id) ? updatedBook : book,
-      ),
-    );
-    setMessage(`Updated ${updatedBook.title || "book"}`);
+  const handleBookUpdated = (u) => {
+    if (!u?.id) return;
+    setBooks((bs) => bs.map((b) => (String(b.id) === String(u.id) ? u : b)));
+    setMessage(`Updated ${u.title || "book"}`);
   };
 
   const selectedCatalog = catalogs.find(
-    (catalog) => String(catalog.id) === String(selectedCatalogId),
+    (c) => String(c.id) === String(selectedCatalogId),
   );
 
+  const filterCardStyle = {
+    background: T.white,
+    border: `1px solid ${T.border}`,
+    borderRadius: T.radius,
+    overflow: "hidden",
+  };
+  const filterHeadStyle = {
+    display: "flex",
+    alignItems: "center",
+    gap: 7,
+    padding: "11px 14px 10px",
+    borderBottom: `1px solid ${T.border}`,
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    color: T.text2,
+  };
+
+  const SORT_OPTIONS = [
+    { val: "createdAt-DESC", label: "Newest First" },
+    { val: "createdAt-ASC", label: "Oldest First" },
+    { val: "title-ASC", label: "Title A → Z" },
+    { val: "title-DESC", label: "Title Z → A" },
+    { val: "author-ASC", label: "Author A → Z" },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-1">
-          <MenuBook sx={{ fontSize: 22, color: "#374151" }} />
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            Browse Books
-          </h1>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: T.sand,
+        fontFamily: "'DM Sans',sans-serif",
+        padding: "32px 36px 48px",
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          marginBottom: 28,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 4,
+            }}
+          >
+            <MenuBook sx={{ fontSize: 22, color: T.text2 }} />
+            <h1
+              style={{
+                fontFamily: "'Playfair Display',serif",
+                fontSize: 26,
+                fontWeight: 600,
+                color: T.text,
+                letterSpacing: "-0.3px",
+              }}
+            >
+              Browse Books
+            </h1>
+          </div>
+          <p style={{ fontSize: 12, color: T.faint }}>
+            {selectedCatalog
+              ? `Showing books in ${selectedCatalog.name}`
+              : "Explore the complete catalog"}
+          </p>
         </div>
-        <p className="text-sm text-gray-500">
-          {selectedCatalog
-            ? `Showing books in ${selectedCatalog.name}`
-            : "Explore the live catalog"}
-        </p>
+        <span
+          style={{
+            background: T.white,
+            border: `1px solid ${T.border}`,
+            borderRadius: 20,
+            padding: "4px 14px",
+            fontSize: 11,
+            fontWeight: 600,
+            color: T.muted,
+          }}
+        >
+          {filteredBooks.length} book{filteredBooks.length !== 1 ? "s" : ""}
+        </span>
       </div>
 
+      {/* Toasts */}
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <div
+          style={{
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: 8,
+            padding: "10px 16px",
+            fontSize: 12,
+            color: "#dc2626",
+            marginBottom: 20,
+            fontWeight: 500,
+          }}
+        >
           {error}
-        </Alert>
+        </div>
       )}
       {message && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {message}
-        </Alert>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Search by title or author"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ fontSize: 18, color: "#9ca3af" }} />
-                </InputAdornment>
-              ),
-            },
+        <div
+          style={{
+            background: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            borderRadius: 8,
+            padding: "10px 16px",
+            fontSize: 12,
+            color: "#166534",
+            marginBottom: 20,
+            fontWeight: 500,
           }}
-          sx={inputSx}
-        />
+        >
+          {message}
+        </div>
+      )}
 
-        <FormControl fullWidth size="small">
-          <InputLabel>Catalog</InputLabel>
-          <Select
-            value={selectedCatalogId}
-            label="Catalog"
-            onChange={(e) => setSelectedCatalogId(e.target.value)}
-            sx={inputSx}
-          >
-            <MenuItem value="">All catalogs</MenuItem>
-            {catalogs.map((catalog) => (
-              <MenuItem key={catalog.id} value={catalog.id}>
-                {catalog.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <FormControl fullWidth size="small">
-          <InputLabel>Availability</InputLabel>
-          <Select
-            value={availabilityFilter}
-            label="Availability"
-            onChange={(e) => setAvailabilityFilter(e.target.value)}
-            sx={inputSx}
-          >
-            <MenuItem value="ALL">All books</MenuItem>
-            <MenuItem value="AVAILABLE">Available only</MenuItem>
-            <MenuItem value="CHECKED_OUT">Checked out</MenuItem>
-          </Select>
-        </FormControl>
-
-        <FormControl fullWidth size="small">
-          <InputLabel>Sort By</InputLabel>
-          <Select
-            value={`${sortBy}-${sortDirection.toLowerCase()}`}
-            label="Sort By"
-            onChange={(e) => {
-              const [field, direction] = e.target.value.split("-");
-              setSortBy(field);
-              setSortDirection(direction.toUpperCase());
-            }}
-            sx={inputSx}
-            startAdornment={
-              <InputAdornment position="start">
-                <SortIcon sx={{ fontSize: 18, color: "#9ca3af" }} />
-              </InputAdornment>
-            }
-          >
-            <MenuItem value="createdAt-desc">Newest</MenuItem>
-            <MenuItem value="createdAt-asc">Oldest</MenuItem>
-            <MenuItem value="title-asc">Title A-Z</MenuItem>
-            <MenuItem value="title-desc">Title Z-A</MenuItem>
-            <MenuItem value="author-asc">Author A-Z</MenuItem>
-            <MenuItem value="author-desc">Author Z-A</MenuItem>
-          </Select>
-        </FormControl>
-      </div>
-
-      {loading ? (
-        <Box sx={{ py: 8, display: "flex", justifyContent: "center" }}>
-          <CircularProgress size={28} />
-        </Box>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-          {filteredBooks.map((book) => (
-            <BookCard
-              key={book.id}
-              book={book}
-              onWishlist={handleWishlist}
-              onReserve={handleReserve}
-              onCheckout={handleCheckout}
-              onBookUpdated={handleBookUpdated}
+      {/* Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 items-start">
+        {/* Sidebar */}
+        <aside className="flex flex-col gap-3">
+          {/* Search */}
+          <div style={{ position: "relative" }}>
+            <SearchIcon
+              sx={{
+                fontSize: 16,
+                color: T.faint,
+                position: "absolute",
+                left: 12,
+                top: "50%",
+                transform: "translateY(-50%)",
+              }}
             />
-          ))}
-        </div>
-      )}
+            <input
+              placeholder="Search title or author…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+              style={{
+                width: "100%",
+                background: T.white,
+                border: `1px solid ${searchFocused ? T.text : T.border}`,
+                borderRadius: T.radiusSm,
+                padding: "10px 12px 10px 36px",
+                fontFamily: "inherit",
+                fontSize: 13,
+                color: T.text,
+                outline: "none",
+                boxShadow: searchFocused
+                  ? `0 0 0 3px rgba(28,25,23,0.06)`
+                  : "none",
+                transition: "border-color 0.18s, box-shadow 0.18s",
+              }}
+            />
+          </div>
 
-      {!loading && filteredBooks.length === 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center mt-6">
-          <Typography sx={{ color: "#9ca3af", fontSize: "0.875rem" }}>
-            No books matched the current filters.
-          </Typography>
-        </div>
-      )}
+          {/* Catalog filter */}
+          <div style={filterCardStyle}>
+            <div style={filterHeadStyle}>
+              <TuneOutlined sx={{ fontSize: 14, color: T.text2 }} />
+              Catalog
+            </div>
+            {[{ id: "", name: "All Catalogs" }, ...catalogs].map((c) => (
+              <FilterBtn
+                key={c.id}
+                active={String(selectedCatalogId) === String(c.id)}
+                onClick={() => setSelectedCatalogId(c.id)}
+              >
+                <span>{c.name}</span>
+                {c.bookCount !== undefined && (
+                  <span
+                    style={{
+                      fontSize: 10,
+                      background:
+                        String(selectedCatalogId) === String(c.id)
+                          ? "rgba(255,255,255,0.2)"
+                          : T.light,
+                      color:
+                        String(selectedCatalogId) === String(c.id)
+                          ? T.white
+                          : T.faint,
+                      borderRadius: 10,
+                      padding: "1px 7px",
+                    }}
+                  >
+                    {c.bookCount}
+                  </span>
+                )}
+              </FilterBtn>
+            ))}
+          </div>
+
+          {/* Availability */}
+          <div style={filterCardStyle}>
+            <div style={filterHeadStyle}>
+              <SortIcon sx={{ fontSize: 14, color: T.text2 }} />
+              Availability
+            </div>
+            {[
+              { val: "ALL", label: "All Books" },
+              { val: "AVAILABLE", label: "Available Only" },
+              { val: "CHECKED_OUT", label: "Checked Out" },
+            ].map(({ val, label }) => (
+              <FilterBtn
+                key={val}
+                active={availabilityFilter === val}
+                onClick={() => setAvailabilityFilter(val)}
+              >
+                {label}
+              </FilterBtn>
+            ))}
+          </div>
+
+          {/* Sort */}
+          <div style={filterCardStyle}>
+            <div style={filterHeadStyle}>
+              <SortIcon sx={{ fontSize: 14, color: T.text2 }} />
+              Sort By
+            </div>
+            {SORT_OPTIONS.map(({ val, label }) => {
+              const [field, dir] = val.split("-");
+              const active = sortBy === field && sortDirection === dir;
+              return (
+                <FilterBtn
+                  key={val}
+                  active={active}
+                  onClick={() => {
+                    setSortBy(field);
+                    setSortDirection(dir);
+                  }}
+                >
+                  {label}
+                </FilterBtn>
+              );
+            })}
+          </div>
+        </aside>
+
+        {/* Main grid */}
+        <main>
+          {loading ? (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                padding: "80px 24px",
+              }}
+            >
+              <CircularProgress size={24} sx={{ color: T.faint }} />
+              <span
+                style={{
+                  fontSize: 11,
+                  color: T.faint,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                Loading books…
+              </span>
+            </div>
+          ) : filteredBooks.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              {filteredBooks.map((book, i) => (
+                <div
+                  key={book.id}
+                  style={{
+                    opacity: 0,
+                    animation: `fadeUpBook 0.35s ease ${Math.min(i * 0.04, 0.4)}s both`,
+                  }}
+                >
+                  <style>{`@keyframes fadeUpBook { from { opacity:0; transform:translateY(14px) scale(0.98); } to { opacity:1; transform:translateY(0) scale(1); } }`}</style>
+                  <BookCard
+                    book={book}
+                    onWishlist={handleWishlist}
+                    onReserve={handleReserve}
+                    onCheckout={handleCheckout}
+                    onBookUpdated={handleBookUpdated}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div
+              style={{
+                background: T.white,
+                border: `1px solid ${T.border}`,
+                borderRadius: T.radius,
+                padding: "64px 24px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+                gap: 6,
+              }}
+            >
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  background: T.light,
+                  border: `1px solid ${T.border}`,
+                  borderRadius: T.radius,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 8,
+                }}
+              >
+                <MenuBook sx={{ fontSize: 24, color: "#c4bfb8" }} />
+              </div>
+              <p style={{ fontSize: 14, fontWeight: 600, color: T.muted }}>
+                No books found
+              </p>
+              <p style={{ fontSize: 12, color: T.faint }}>
+                Try adjusting the filters or search term
+              </p>
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 };

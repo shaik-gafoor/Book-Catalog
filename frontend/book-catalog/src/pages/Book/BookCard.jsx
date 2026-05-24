@@ -1,21 +1,31 @@
 import React, { useState } from "react";
-import {
-  IconButton,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  TextField,
-  Stack,
-} from "@mui/material";
+import { Dialog, DialogContent, TextField } from "@mui/material";
 import {
   MenuBook as BookIcon,
   PersonOutlined as PersonIcon,
-  CopyAll as CopiesIcon,
   Close as CloseIcon,
+  BookmarkBorder,
+  Bookmark,
+  AutoStories,
+  Edit,
 } from "@mui/icons-material";
 import { updateBook } from "../../api/libraryApi";
+
+/* ── shared token object so values stay DRY ── */
+const T = {
+  sand: "#f7f6f3",
+  white: "#ffffff",
+  border: "#ece9e3",
+  border2: "#e2ddd8",
+  text: "#1c1917",
+  text2: "#44403c",
+  muted: "#78716c",
+  faint: "#a8a29e",
+  light: "#f5f4f1",
+  indigo: "#6366f1",
+  radius: "12px",
+  radiusSm: "8px",
+};
 
 const buildEditState = (book) => ({
   title: book.title || "",
@@ -36,35 +46,37 @@ const BookCard = ({
   onCheckout,
   onBookUpdated,
 }) => {
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState(buildEditState(book));
+  const [wishlisted, setWishlisted] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
   const isAvailable = (book.availableCopies ?? 0) > 0;
   const coverUrl = book.coverImagesUrl || book.coverImageUrl;
   const catalogName =
-    book.catalogName || book.genreName || book.catalogCode || "Catalog";
+    book.catalogName || book.genreName || book.catalogCode || "General";
 
-  const openDetails = () => {
+  const openDialog = () => {
     setEditForm(buildEditState(book));
     setIsEditing(false);
-    setDetailsOpen(true);
+    setOpen(true);
   };
-
-  const closeDetails = () => {
+  const closeDialog = () => {
     setIsEditing(false);
-    setDetailsOpen(false);
+    setOpen(false);
   };
 
-  const handleEditChange = (field) => (event) => {
-    const value = event.target.value;
-    setEditForm((current) => ({
-      ...current,
+  const handleEditChange = (field) => (e) => {
+    const value = e.target.value;
+    setEditForm((prev) => ({
+      ...prev,
       [field]: value,
       ...(field === "totalCopies" && Number.isFinite(Number(value))
         ? {
             availableCopies: Math.min(
-              Number(current.availableCopies || 0),
+              Number(prev.availableCopies || 0),
               Number(value),
             ),
           }
@@ -97,389 +109,679 @@ const BookCard = ({
         coverImagesUrl: editForm.coverImagesUrl.trim(),
         active: book.active ?? true,
       };
-
-      const updatedBook = await updateBook(book.id, payload);
-      if (onBookUpdated) {
-        onBookUpdated(updatedBook || { ...book, ...payload });
-      }
+      const updated = await updateBook(book.id, payload);
+      if (onBookUpdated) onBookUpdated(updated || { ...book, ...payload });
       setIsEditing(false);
-      setDetailsOpen(true);
     } finally {
       setSaving(false);
     }
   };
 
-  return (
-    <div
-      className="group bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer hover:-translate-y-0.5"
-      onClick={openDetails}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          openDetails();
-        }
-      }}
-      role="button"
-      tabIndex={0}
-    >
-      <div className="relative h-36 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
-        {coverUrl ? (
-          <img
-            src={coverUrl}
-            alt={book.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-            <BookIcon sx={{ fontSize: 44, color: "#d1d5db" }} />
-            <span className="text-xs text-gray-400 font-medium">
-              {catalogName}
-            </span>
-          </div>
-        )}
+  const handleWishlist = (e) => {
+    e.stopPropagation();
+    setWishlisted((v) => !v);
+    onWishlist?.(book);
+  };
 
-        <div className="absolute top-3 right-3">
+  /* ── inline style helpers ── */
+  const cardStyle = {
+    background: T.white,
+    border: `1px solid ${hovered ? T.border2 : T.border}`,
+    borderRadius: T.radius,
+    overflow: "hidden",
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    transition:
+      "box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease",
+    boxShadow: hovered
+      ? "0 8px 40px rgba(0,0,0,0.11)"
+      : "0 2px 8px rgba(0,0,0,0.04)",
+    transform: hovered ? "translateY(-4px)" : "translateY(0)",
+  };
+  const badgeStyle = (avail) => ({
+    fontSize: 10,
+    fontWeight: 600,
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    padding: "3px 9px",
+    borderRadius: 20,
+    border: "1px solid transparent",
+    background: avail ? "#d1fae5" : "#fef3c7",
+    color: avail ? "#065f46" : "#92400e",
+    borderColor: avail ? "#a7f3d0" : "#fde68a",
+  });
+  const btnStyle = (variant) => {
+    const base = {
+      fontFamily: "inherit",
+      fontSize: 11,
+      fontWeight: 600,
+      letterSpacing: "0.05em",
+      padding: "6px 13px",
+      borderRadius: T.radiusSm,
+      cursor: "pointer",
+      border: "1px solid transparent",
+      whiteSpace: "nowrap",
+      transition: "background 0.15s, transform 0.12s",
+      display: "inline-flex",
+      alignItems: "center",
+    };
+    if (variant === "ghost")
+      return {
+        ...base,
+        background: T.light,
+        color: T.text2,
+        borderColor: T.border,
+      };
+    if (variant === "outline")
+      return {
+        ...base,
+        background: "transparent",
+        color: T.text2,
+        borderColor: T.border2,
+      };
+    if (variant === "solid")
+      return {
+        ...base,
+        background: T.text,
+        color: T.white,
+        borderColor: T.text,
+      };
+    if (variant === "disabled")
+      return {
+        ...base,
+        background: T.light,
+        color: T.faint,
+        opacity: 0.5,
+        cursor: "not-allowed",
+      };
+    return base;
+  };
+  const statBoxStyle = {
+    background: T.white,
+    border: `1px solid ${T.border}`,
+    borderRadius: 10,
+    padding: "12px 14px",
+  };
+  const labelStyle = {
+    fontFamily: "inherit",
+    fontSize: 10,
+    fontWeight: 600,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    color: T.faint,
+    marginBottom: 4,
+  };
+
+  return (
+    <>
+      {/* ── Card ── */}
+      <div
+        style={cardStyle}
+        onClick={openDialog}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            openDialog();
+          }
+        }}
+      >
+        {/* Cover */}
+        <div
+          style={{
+            position: "relative",
+            height: 160,
+            background: "linear-gradient(135deg,#f7f6f3,#ece9e3)",
+            overflow: "hidden",
+            flexShrink: 0,
+          }}
+        >
+          {coverUrl ? (
+            <img
+              src={coverUrl}
+              alt={book.title}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                transition: "transform 0.4s ease",
+                transform: hovered ? "scale(1.04)" : "scale(1)",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
+              <BookIcon sx={{ fontSize: 40, color: "#c4bfb8" }} />
+              <span
+                style={{
+                  fontSize: 10,
+                  color: T.faint,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {catalogName}
+              </span>
+            </div>
+          )}
+          {/* Availability badge */}
           <span
-            className="text-xs font-medium px-2 py-0.5 rounded-full"
             style={{
-              background: isAvailable ? "#f9fafb" : "#f3f4f6",
-              color: isAvailable ? "#111827" : "#6b7280",
-              border: "1px solid #e5e7eb",
+              ...badgeStyle(isAvailable),
+              position: "absolute",
+              top: 10,
+              left: 10,
             }}
           >
             {isAvailable ? "Available" : "Checked Out"}
           </span>
+          {/* Wishlist */}
+          <button
+            onClick={handleWishlist}
+            aria-label="Wishlist"
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+              width: 30,
+              height: 30,
+              background: "rgba(255,255,255,0.9)",
+              backdropFilter: "blur(4px)",
+              border: `1px solid ${T.border}`,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
+          >
+            {wishlisted ? (
+              <Bookmark sx={{ fontSize: 15, color: T.indigo }} />
+            ) : (
+              <BookmarkBorder sx={{ fontSize: 15, color: T.muted }} />
+            )}
+          </button>
         </div>
-      </div>
 
-      <div className="p-3.5">
-        <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2 group-hover:text-gray-700 transition-colors leading-snug">
-          {book.title}
-        </h3>
-
-        <div className="flex items-center gap-1.5 text-gray-500 mb-2">
-          <PersonIcon sx={{ fontSize: 14, color: "#9ca3af" }} />
-          <span className="text-xs line-clamp-1">{book.author}</span>
-        </div>
-
-        {book.addedByName && (
-          <p className="text-[11px] font-medium text-gray-500 mb-2">
-            Added by {book.addedByName}
+        {/* Body */}
+        <div
+          style={{
+            padding: "14px 16px 16px",
+            display: "flex",
+            flexDirection: "column",
+            flex: 1,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: T.indigo,
+              marginBottom: 5,
+              display: "block",
+            }}
+          >
+            {catalogName}
+          </span>
+          <h3
+            style={{
+              fontFamily: "'Playfair Display',serif",
+              fontSize: 15,
+              fontWeight: 600,
+              color: T.text,
+              lineHeight: 1.35,
+              marginBottom: 5,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {book.title}
+          </h3>
+          <p
+            style={{
+              fontSize: 12,
+              color: T.faint,
+              marginBottom: 4,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            <PersonIcon
+              sx={{
+                fontSize: 12,
+                color: T.faint,
+                mr: "3px",
+                verticalAlign: "middle",
+              }}
+            />
+            {book.author}
           </p>
-        )}
-
-        <div className="flex items-center justify-between text-[11px] text-gray-400 mb-3 pb-2 border-b border-gray-100">
-          <span>{catalogName}</span>
-          <span>{isAvailable ? "Ready to borrow" : "Checked out"}</span>
-        </div>
-
-        <Stack spacing={1}>
-          {(onWishlist || onReserve || onCheckout) && (
-            <div
-              className="grid grid-cols-1 sm:grid-cols-3 gap-2"
-              onClick={(event) => event.stopPropagation()}
-            >
-              {onWishlist && (
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => onWishlist(book)}
-                  sx={{ textTransform: "none" }}
-                >
-                  Wishlist
-                </Button>
-              )}
-              {onReserve && (
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => onReserve(book)}
-                  sx={{ textTransform: "none" }}
-                >
-                  Reserve
-                </Button>
-              )}
-              {onCheckout && (
-                <Button
-                  size="small"
-                  variant="contained"
-                  onClick={() => onCheckout(book)}
-                  sx={{ textTransform: "none" }}
-                >
-                  Checkout
-                </Button>
-              )}
-            </div>
+          {book.addedByName && (
+            <p style={{ fontSize: 10, color: T.faint, marginBottom: 10 }}>
+              Added by {book.addedByName}
+            </p>
           )}
-        </Stack>
+
+          {/* Actions */}
+          <div
+            style={{
+              display: "flex",
+              gap: 6,
+              marginTop: "auto",
+              paddingTop: 12,
+              borderTop: `1px solid ${T.border}`,
+              flexWrap: "wrap",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {onWishlist && (
+              <button style={btnStyle("ghost")} onClick={handleWishlist}>
+                {wishlisted ? "Wishlisted" : "Wishlist"}
+              </button>
+            )}
+            {onReserve && (
+              <button
+                style={btnStyle("outline")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReserve(book);
+                }}
+              >
+                Reserve
+              </button>
+            )}
+            {onCheckout && (
+              <button
+                style={isAvailable ? btnStyle("solid") : btnStyle("disabled")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isAvailable) onCheckout(book);
+                }}
+                disabled={!isAvailable}
+              >
+                Checkout
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
+      {/* ── Detail / Edit Dialog ── */}
       <Dialog
-        open={detailsOpen}
-        onClose={closeDetails}
+        open={open}
+        onClose={closeDialog}
         maxWidth="sm"
         fullWidth
+        onClick={(e) => e.stopPropagation()}
         PaperProps={{
-          sx: {
-            borderRadius: 4,
+          style: {
+            borderRadius: 16,
             overflow: "hidden",
+            border: `1px solid ${T.border}`,
+            boxShadow: "0 8px 40px rgba(0,0,0,0.13)",
           },
         }}
       >
-        <DialogTitle sx={{ pb: 1, pr: 6 }}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mb-1">
-                {isEditing ? "Edit Book" : "Book Details"}
-              </p>
-              <h2 className="text-lg font-semibold text-gray-900 leading-tight">
-                {book.title}
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">{book.author}</p>
+        {/* Dialog cover */}
+        <div
+          style={{
+            position: "relative",
+            height: 200,
+            background: "linear-gradient(135deg,#f7f6f3,#ece9e3)",
+          }}
+        >
+          {coverUrl ? (
+            <img
+              src={coverUrl}
+              alt={book.title}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <BookIcon sx={{ fontSize: 56, color: "#d1cfc8" }} />
             </div>
-          </div>
-
-          <IconButton
-            onClick={(event) => {
-              event.stopPropagation();
-              closeDetails();
-            }}
-            aria-label="Close book details"
-            sx={{
+          )}
+          <div
+            style={{
               position: "absolute",
-              right: 12,
-              top: 12,
-              color: "#9ca3af",
-              borderRadius: 999,
-              border: "1px solid #e5e7eb",
-              bgcolor: "#ffffff",
-              "&:hover": { bgcolor: "#f9fafb" },
+              inset: 0,
+              background:
+                "linear-gradient(to top, rgba(0,0,0,0.18), transparent 50%)",
+              padding: 12,
+              display: "flex",
+              alignItems: "flex-start",
             }}
           >
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
+            <span style={badgeStyle(isAvailable)}>
+              {isAvailable ? "Available" : "Checked Out"}
+            </span>
+          </div>
+          <button
+            onClick={closeDialog}
+            aria-label="Close"
+            style={{
+              position: "absolute",
+              top: 12,
+              right: 12,
+              width: 32,
+              height: 32,
+              background: "rgba(255,255,255,0.92)",
+              backdropFilter: "blur(4px)",
+              border: `1px solid ${T.border}`,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              color: T.text2,
+            }}
+          >
+            <CloseIcon sx={{ fontSize: 16 }} />
+          </button>
+        </div>
 
-        <DialogContent dividers sx={{ bgcolor: "#fafafa" }}>
-          <div className="space-y-4">
-            <div className="relative h-56 rounded-2xl overflow-hidden bg-white border border-gray-200">
-              {coverUrl ? (
-                <img
-                  src={coverUrl}
-                  alt={book.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-                  <BookIcon sx={{ fontSize: 56, color: "#d1d5db" }} />
-                  <span className="text-xs text-gray-400 font-medium">
-                    {catalogName}
-                  </span>
-                </div>
-              )}
-            </div>
+        <DialogContent style={{ padding: "20px 22px", background: T.sand }}>
+          {!isEditing ? (
+            <>
+              {/* Header */}
+              <div style={{ marginBottom: 16 }}>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: T.indigo,
+                  }}
+                >
+                  {catalogName}
+                </span>
+                <h2
+                  style={{
+                    fontFamily: "'Playfair Display',serif",
+                    fontSize: 20,
+                    fontWeight: 600,
+                    color: T.text,
+                    margin: "4px 0",
+                  }}
+                >
+                  {book.title}
+                </h2>
+                <p style={{ fontSize: 13, color: T.faint }}>
+                  <PersonIcon
+                    sx={{
+                      fontSize: 13,
+                      color: T.faint,
+                      mr: "4px",
+                      verticalAlign: "middle",
+                    }}
+                  />
+                  {book.author}
+                </p>
+              </div>
 
-            {!isEditing ? (
-              <>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-xl bg-white border border-gray-200 px-4 py-3">
-                    <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1">
-                      Available copies
-                    </p>
-                    <p className="font-semibold text-gray-800">
-                      {book.availableCopies ?? 0}
+              {/* Stats 2×2 */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                  marginBottom: 12,
+                }}
+              >
+                {[
+                  { label: "Available Copies", val: book.availableCopies ?? 0 },
+                  { label: "Total Copies", val: book.totalCopies ?? 0 },
+                  { label: "Pages", val: book.pages || "—" },
+                  { label: "Price", val: book.price ? `₹${book.price}` : "—" },
+                ].map(({ label, val }) => (
+                  <div key={label} style={statBoxStyle}>
+                    <p style={labelStyle}>{label}</p>
+                    <p
+                      style={{
+                        fontFamily: "'Playfair Display',serif",
+                        fontSize: 18,
+                        fontWeight: 600,
+                        color: T.text,
+                      }}
+                    >
+                      {val}
                     </p>
                   </div>
-                  <div className="rounded-xl bg-white border border-gray-200 px-4 py-3">
-                    <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1">
-                      Total copies
-                    </p>
-                    <p className="font-semibold text-gray-800">
-                      {book.totalCopies ?? 0}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-white border border-gray-200 px-4 py-3">
-                    <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1">
-                      Pages
-                    </p>
-                    <p className="font-semibold text-gray-800">
-                      {book.pages || "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-white border border-gray-200 px-4 py-3">
-                    <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1">
-                      Catalog
-                    </p>
-                    <p className="font-semibold text-gray-800">{catalogName}</p>
-                  </div>
-                </div>
+                ))}
+              </div>
 
-                <div className="rounded-xl bg-white border border-gray-200 px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1">
-                    Description
-                  </p>
-                  <p className="text-sm text-gray-700 leading-relaxed">
-                    {book.description || "No description available."}
-                  </p>
-                </div>
+              {/* Description */}
+              <div style={{ ...statBoxStyle, marginBottom: 12 }}>
+                <p style={labelStyle}>Description</p>
+                <p style={{ fontSize: 13, color: T.text2, lineHeight: 1.65 }}>
+                  {book.description || "No description available."}
+                </p>
+              </div>
 
-                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                  {book.addedByName && (
-                    <span className="rounded-full bg-white border border-gray-200 px-3 py-1">
-                      Added by {book.addedByName}
+              {/* Tags */}
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 6,
+                  marginBottom: 16,
+                }}
+              >
+                {[
+                  book.addedByName && `Added by ${book.addedByName}`,
+                  book.publisher,
+                  isAvailable ? "Available now" : "Currently checked out",
+                ]
+                  .filter(Boolean)
+                  .map((tag) => (
+                    <span
+                      key={tag}
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 500,
+                        background: T.white,
+                        border: `1px solid ${T.border}`,
+                        borderRadius: 20,
+                        padding: "3px 11px",
+                        color: T.muted,
+                      }}
+                    >
+                      {tag}
                     </span>
+                  ))}
+              </div>
+
+              {/* Actions */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingTop: 14,
+                  borderTop: `1px solid ${T.border}`,
+                  gap: 8,
+                }}
+              >
+                <button
+                  style={btnStyle("ghost")}
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Edit
+                    sx={{ fontSize: 14, mr: "4px", verticalAlign: "middle" }}
+                  />
+                  Edit
+                </button>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {onWishlist && (
+                    <button
+                      style={btnStyle("outline")}
+                      onClick={() => onWishlist(book)}
+                    >
+                      Wishlist
+                    </button>
                   )}
-                  <span className="rounded-full bg-white border border-gray-200 px-3 py-1">
-                    {isAvailable ? "Available now" : "Currently checked out"}
-                  </span>
-                  {book.price ? (
-                    <span className="rounded-full bg-white border border-gray-200 px-3 py-1">
-                      Price ₹{book.price}
-                    </span>
-                  ) : null}
+                  {onReserve && (
+                    <button
+                      style={btnStyle("outline")}
+                      onClick={() => onReserve(book)}
+                    >
+                      Reserve
+                    </button>
+                  )}
+                  {onCheckout && (
+                    <button
+                      style={
+                        isAvailable ? btnStyle("solid") : btnStyle("disabled")
+                      }
+                      onClick={() => {
+                        if (isAvailable) onCheckout(book);
+                      }}
+                      disabled={!isAvailable}
+                    >
+                      <AutoStories
+                        sx={{
+                          fontSize: 14,
+                          mr: "4px",
+                          verticalAlign: "middle",
+                        }}
+                      />
+                      Checkout
+                    </button>
+                  )}
                 </div>
-              </>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <TextField
-                  label="Title"
-                  value={editForm.title}
-                  onChange={handleEditChange("title")}
-                  fullWidth
-                  size="small"
-                />
-                <TextField
-                  label="Author"
-                  value={editForm.author}
-                  onChange={handleEditChange("author")}
-                  fullWidth
-                  size="small"
-                />
-                <TextField
-                  label="Pages"
-                  type="number"
-                  value={editForm.pages}
-                  onChange={handleEditChange("pages")}
-                  fullWidth
-                  size="small"
-                />
-                <TextField
-                  label="Total Copies"
-                  type="number"
-                  value={editForm.totalCopies}
-                  onChange={handleEditChange("totalCopies")}
-                  fullWidth
-                  size="small"
-                  inputProps={{ min: 0 }}
-                />
-                <TextField
-                  label="Available Copies"
-                  type="number"
-                  value={editForm.availableCopies}
-                  onChange={handleEditChange("availableCopies")}
-                  fullWidth
-                  size="small"
-                  inputProps={{ min: 0, max: editForm.totalCopies || 0 }}
-                />
-                <TextField
-                  label="Publisher"
-                  value={editForm.publisher}
-                  onChange={handleEditChange("publisher")}
-                  fullWidth
-                  size="small"
-                />
-                <TextField
-                  label="Price"
-                  type="number"
-                  value={editForm.price}
-                  onChange={handleEditChange("price")}
-                  fullWidth
-                  size="small"
-                />
-                <TextField
-                  label="Cover Image URL"
-                  value={editForm.coverImagesUrl}
-                  onChange={handleEditChange("coverImagesUrl")}
-                  fullWidth
-                  size="small"
-                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ marginBottom: 16 }}>
+                <h2
+                  style={{
+                    fontFamily: "'Playfair Display',serif",
+                    fontSize: 18,
+                    fontWeight: 600,
+                    color: T.text,
+                  }}
+                >
+                  Edit Book
+                </h2>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                  marginBottom: 16,
+                }}
+              >
+                {[
+                  { label: "Title", field: "title" },
+                  { label: "Author", field: "author" },
+                  { label: "Publisher", field: "publisher" },
+                  { label: "Pages", field: "pages", type: "number" },
+                  {
+                    label: "Total Copies",
+                    field: "totalCopies",
+                    type: "number",
+                  },
+                  {
+                    label: "Avail. Copies",
+                    field: "availableCopies",
+                    type: "number",
+                  },
+                  { label: "Price", field: "price", type: "number" },
+                  { label: "Cover URL", field: "coverImagesUrl" },
+                ].map(({ label, field, type = "text" }) => (
+                  <TextField
+                    key={field}
+                    label={label}
+                    size="small"
+                    fullWidth
+                    type={type}
+                    value={editForm[field]}
+                    onChange={handleEditChange(field)}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "8px",
+                        fontSize: 13,
+                        background: T.white,
+                      },
+                    }}
+                  />
+                ))}
                 <TextField
                   label="Description"
-                  value={editForm.description}
-                  onChange={handleEditChange("description")}
+                  size="small"
                   fullWidth
                   multiline
-                  minRows={4}
-                  sx={{ gridColumn: "1 / -1" }}
+                  minRows={3}
+                  value={editForm.description}
+                  onChange={handleEditChange("description")}
+                  sx={{
+                    gridColumn: "1 / -1",
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "8px",
+                      fontSize: 13,
+                      background: T.white,
+                    },
+                  }}
                 />
               </div>
-            )}
-          </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 8,
+                  paddingTop: 14,
+                  borderTop: `1px solid ${T.border}`,
+                }}
+              >
+                <button
+                  style={btnStyle("ghost")}
+                  onClick={() => setIsEditing(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  style={saving ? btnStyle("disabled") : btnStyle("solid")}
+                  onClick={handleSave}
+                  disabled={saving}
+                >
+                  {saving ? "Saving…" : "Save Changes"}
+                </button>
+              </div>
+            </>
+          )}
         </DialogContent>
-
-        <DialogActions sx={{ px: 3, py: 2, justifyContent: "space-between" }}>
-          <Button
-            onClick={closeDetails}
-            variant="outlined"
-            sx={{ textTransform: "none" }}
-          >
-            {isEditing ? "Cancel" : "Close"}
-          </Button>
-
-          <div className="flex items-center gap-2">
-            {!isEditing ? (
-              <Button
-                onClick={() => setIsEditing(true)}
-                variant="contained"
-                sx={{ textTransform: "none" }}
-              >
-                Edit
-              </Button>
-            ) : (
-              <Button
-                onClick={handleSave}
-                variant="contained"
-                disabled={saving}
-                sx={{ textTransform: "none" }}
-              >
-                {saving ? "Saving..." : "Submit"}
-              </Button>
-            )}
-
-            {onWishlist && (
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => onWishlist(book)}
-                sx={{ textTransform: "none" }}
-              >
-                Wishlist
-              </Button>
-            )}
-            {onReserve && (
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => onReserve(book)}
-                sx={{ textTransform: "none" }}
-              >
-                Reserve
-              </Button>
-            )}
-            {onCheckout && (
-              <Button
-                size="small"
-                variant="contained"
-                onClick={() => onCheckout(book)}
-                sx={{ textTransform: "none" }}
-              >
-                Checkout
-              </Button>
-            )}
-          </div>
-        </DialogActions>
       </Dialog>
-    </div>
+    </>
   );
 };
 
