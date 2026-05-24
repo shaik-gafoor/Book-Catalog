@@ -4,12 +4,13 @@ import { TuneOutlined } from "@mui/icons-material";
 const T = {
   white: "#ffffff",
   border: "#ece9e3",
+  border2: "#e2ddd8",
   text: "#1c1917",
   text2: "#44403c",
   muted: "#78716c",
   faint: "#a8a29e",
   light: "#f5f4f1",
-  radius: "12px",
+  radius: "14px",
 };
 
 const CatalogFilter = ({ genres = [], selectedGenreId, onGenreSelect }) => {
@@ -36,6 +37,15 @@ const CatalogFilter = ({ genres = [], selectedGenreId, onGenreSelect }) => {
     };
   };
 
+  const countStyle = (active) => ({
+    fontSize: 10,
+    borderRadius: 10,
+    padding: "1px 7px",
+    fontWeight: 500,
+    background: active ? "rgba(255,255,255,0.2)" : T.light,
+    color: active ? T.white : T.faint,
+  });
+
   return (
     <div
       style={{
@@ -51,7 +61,7 @@ const CatalogFilter = ({ genres = [], selectedGenreId, onGenreSelect }) => {
           display: "flex",
           alignItems: "center",
           gap: 7,
-          padding: "11px 14px 10px",
+          padding: "11px 14px",
           borderBottom: `1px solid ${T.border}`,
           fontSize: 10,
           fontWeight: 700,
@@ -64,46 +74,35 @@ const CatalogFilter = ({ genres = [], selectedGenreId, onGenreSelect }) => {
         Filter by Catalog
       </div>
 
-      {/* All option */}
+      {/* "All" option */}
       <button
         style={itemStyle(null)}
         onClick={() => onGenreSelect(null)}
         onMouseEnter={() => setHov(null)}
-        onMouseLeave={() => setHov(-1)}
+        onMouseLeave={() => setHov("__none__")}
       >
-        All Catalogs
+        <span>All Catalogs</span>
       </button>
 
       {/* Genre list */}
       <div style={{ maxHeight: 320, overflowY: "auto" }}>
-        {genres.map((genre) => (
-          <button
-            key={genre.id}
-            style={itemStyle(genre.id)}
-            onClick={() => onGenreSelect(genre.id)}
-            onMouseEnter={() => setHov(genre.id)}
-            onMouseLeave={() => setHov(null)}
-          >
-            <span>{genre.name}</span>
-            {genre.bookCount !== undefined && (
-              <span
-                style={{
-                  fontSize: 10,
-                  borderRadius: 10,
-                  padding: "1px 7px",
-                  fontWeight: 500,
-                  background:
-                    selectedGenreId === genre.id
-                      ? "rgba(255,255,255,0.2)"
-                      : T.light,
-                  color: selectedGenreId === genre.id ? T.white : T.faint,
-                }}
-              >
-                {genre.bookCount}
-              </span>
-            )}
-          </button>
-        ))}
+        {genres.map((genre) => {
+          const active = selectedGenreId === genre.id;
+          return (
+            <button
+              key={genre.id}
+              style={itemStyle(genre.id)}
+              onClick={() => onGenreSelect(genre.id)}
+              onMouseEnter={() => setHov(genre.id)}
+              onMouseLeave={() => setHov(null)}
+            >
+              <span>{genre.name}</span>
+              {genre.bookCount !== undefined && (
+                <span style={countStyle(active)}>{genre.bookCount}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

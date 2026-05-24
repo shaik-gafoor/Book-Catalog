@@ -14,7 +14,8 @@ const T = {
   muted: "#78716c",
   faint: "#a8a29e",
   light: "#f5f4f1",
-  radius: "12px",
+  indigo: "#6366f1",
+  radius: "14px",
   radiusSm: "8px",
 };
 
@@ -26,7 +27,22 @@ const fallbackCatalogs = [
   { id: "general", name: "General" },
 ];
 
-/* ── Labelled input wrapper ── */
+/* ── Reusable input styles ── */
+const mkInput = (focused) => ({
+  fontFamily: "inherit",
+  fontSize: 13,
+  color: T.text,
+  background: focused ? T.white : T.sand,
+  border: `1px solid ${focused ? T.text : T.border}`,
+  borderRadius: T.radiusSm,
+  padding: "10px 13px",
+  outline: "none",
+  width: "100%",
+  boxShadow: focused ? "0 0 0 3px rgba(28,25,23,0.06)" : "none",
+  transition: "border-color 0.18s, box-shadow 0.18s, background 0.18s",
+});
+
+/* ── Labelled field ── */
 const Field = ({ label, required, children }) => (
   <div
     style={{
@@ -52,19 +68,55 @@ const Field = ({ label, required, children }) => (
   </div>
 );
 
-const inputStyle = (focused) => ({
-  fontFamily: "inherit",
-  fontSize: 13,
-  color: T.text,
-  background: focused ? T.white : T.sand,
-  border: `1px solid ${focused ? T.text : T.border}`,
-  borderRadius: T.radiusSm,
-  padding: "10px 13px",
-  outline: "none",
-  width: "100%",
-  boxShadow: focused ? "0 0 0 3px rgba(28,25,23,0.06)" : "none",
-  transition: "border-color 0.18s, box-shadow 0.18s, background 0.18s",
-});
+/* ── Action button ── */
+const Btn = ({
+  variant = "solid",
+  type = "button",
+  onClick,
+  disabled,
+  children,
+}) => {
+  const [hov, setHov] = useState(false);
+  const styles = {
+    solid: {
+      background: disabled ? T.muted : hov ? "#2d2926" : T.text,
+      color: T.white,
+      borderColor: T.text,
+    },
+    ghost: {
+      background: hov ? T.light : T.white,
+      color: T.text2,
+      borderColor: T.border,
+    },
+  };
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        fontFamily: "inherit",
+        fontSize: 13,
+        fontWeight: 600,
+        padding: "10px 22px",
+        borderRadius: T.radiusSm,
+        cursor: disabled ? "not-allowed" : "pointer",
+        border: "1px solid transparent",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        transition: "background 0.15s, transform 0.12s",
+        transform: hov && !disabled ? "translateY(-1px)" : "none",
+        opacity: disabled ? 0.5 : 1,
+        ...styles[variant],
+      }}
+    >
+      {children}
+    </button>
+  );
+};
 
 const AddBookPage = () => {
   const navigate = useNavigate();
@@ -84,9 +136,8 @@ const AddBookPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  /* focus tracking per field */
   const [foc, setFoc] = useState({});
+
   const focus = (k) => setFoc((p) => ({ ...p, [k]: true }));
   const blur = (k) => setFoc((p) => ({ ...p, [k]: false }));
 
@@ -145,11 +196,11 @@ const AddBookPage = () => {
       };
       const created = await createBook(payload);
       setSuccess(
-        `${created?.title || payload.title} was added to ${selectedCatalog?.name || "the catalog"}.`,
+        `"${created?.title || payload.title}" added to ${selectedCatalog?.name}.`,
       );
       navigate("/books", {
         state: {
-          message: `${created?.title || payload.title} was added by ${uploaderName}.`,
+          message: `"${created?.title || payload.title}" was added by ${uploaderName}.`,
         },
       });
     } catch (err) {
@@ -159,33 +210,20 @@ const AddBookPage = () => {
     }
   };
 
-  const cardStyle = {
+  const cardSx = {
     background: T.white,
     border: `1px solid ${T.border}`,
     borderRadius: T.radius,
-    padding: "20px 22px",
+    padding: "22px 24px",
   };
-  const sectionLabel = {
+  const sectionTitleSx = {
     fontSize: 11,
     fontWeight: 700,
     letterSpacing: "0.1em",
     textTransform: "uppercase",
     color: T.text2,
-    marginBottom: 16,
+    marginBottom: 18,
     display: "block",
-  };
-  const btnBase = {
-    fontFamily: "inherit",
-    fontSize: 13,
-    fontWeight: 600,
-    padding: "10px 22px",
-    borderRadius: T.radiusSm,
-    cursor: "pointer",
-    border: "1px solid transparent",
-    transition: "background 0.15s, transform 0.12s",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
   };
 
   return (
@@ -194,7 +232,7 @@ const AddBookPage = () => {
         minHeight: "100vh",
         background: T.sand,
         fontFamily: "'DM Sans',sans-serif",
-        padding: "32px 36px 56px",
+        padding: "32px 36px 64px",
       }}
     >
       {/* Header */}
@@ -209,8 +247,8 @@ const AddBookPage = () => {
         <button
           onClick={() => navigate("/books")}
           style={{
-            width: 34,
-            height: 34,
+            width: 36,
+            height: 36,
             flexShrink: 0,
             background: T.white,
             border: `1px solid ${T.border}`,
@@ -222,7 +260,7 @@ const AddBookPage = () => {
             cursor: "pointer",
           }}
         >
-          <ArrowBack sx={{ fontSize: 16 }} />
+          <ArrowBack sx={{ fontSize: 17 }} />
         </button>
         <div>
           <div
@@ -247,7 +285,7 @@ const AddBookPage = () => {
             </h1>
           </div>
           <p style={{ fontSize: 12, color: T.faint }}>
-            Create a new entry and place it into a catalog category.
+            Create a new entry and assign it to a catalog category.
           </p>
         </div>
       </div>
@@ -258,12 +296,12 @@ const AddBookPage = () => {
           style={{
             background: "#fef2f2",
             border: "1px solid #fecaca",
-            borderRadius: 8,
+            borderRadius: T.radiusSm,
             padding: "10px 16px",
             fontSize: 12,
+            fontWeight: 500,
             color: "#dc2626",
             marginBottom: 20,
-            fontWeight: 500,
           }}
         >
           {error}
@@ -274,12 +312,12 @@ const AddBookPage = () => {
           style={{
             background: "#f0fdf4",
             border: "1px solid #bbf7d0",
-            borderRadius: 8,
+            borderRadius: T.radiusSm,
             padding: "10px 16px",
             fontSize: 12,
+            fontWeight: 500,
             color: "#166534",
             marginBottom: 20,
-            fontWeight: 500,
           }}
         >
           {success}
@@ -288,44 +326,44 @@ const AddBookPage = () => {
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Left — fields */}
+          {/* Left — Book info */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div style={cardStyle}>
-              <span style={sectionLabel}>Book Information</span>
+            <div style={cardSx}>
+              <span style={sectionTitleSx}>Book Information</span>
 
               <Field label="Book Title" required>
                 <input
-                  style={inputStyle(foc.title)}
-                  placeholder="e.g. The Great Gatsby"
                   value={form.title}
+                  placeholder="e.g. The Great Gatsby"
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   onFocus={() => focus("title")}
                   onBlur={() => blur("title")}
+                  style={mkInput(foc.title)}
                   required
                 />
               </Field>
 
               <Field label="Author" required>
                 <input
-                  style={inputStyle(foc.author)}
-                  placeholder="e.g. F. Scott Fitzgerald"
                   value={form.author}
+                  placeholder="e.g. F. Scott Fitzgerald"
                   onChange={(e) => setForm({ ...form, author: e.target.value })}
                   onFocus={() => focus("author")}
                   onBlur={() => blur("author")}
+                  style={mkInput(foc.author)}
                   required
                 />
               </Field>
 
               <Field label="Catalog Category" required>
                 <select
-                  style={inputStyle(foc.catalog)}
                   value={form.catalogId}
                   onChange={(e) =>
                     setForm({ ...form, catalogId: e.target.value })
                   }
-                  onFocus={() => focus("catalog")}
-                  onBlur={() => blur("catalog")}
+                  onFocus={() => focus("cat")}
+                  onBlur={() => blur("cat")}
+                  style={{ ...mkInput(foc.cat), cursor: "pointer" }}
                 >
                   {catalogs.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -337,37 +375,38 @@ const AddBookPage = () => {
 
               <Field label="Description" required>
                 <textarea
-                  style={{
-                    ...inputStyle(foc.desc),
-                    resize: "vertical",
-                    minHeight: 110,
-                  }}
-                  placeholder="Write a short description of the book…"
                   value={form.description}
                   rows={5}
+                  placeholder="Write a brief description of the book…"
                   onChange={(e) =>
                     setForm({ ...form, description: e.target.value })
                   }
                   onFocus={() => focus("desc")}
                   onBlur={() => blur("desc")}
+                  style={{
+                    ...mkInput(foc.desc),
+                    resize: "vertical",
+                    minHeight: 110,
+                  }}
                   required
                 />
               </Field>
             </div>
           </div>
 
-          {/* Right — cover + preview */}
+          {/* Right — Cover + Preview */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {/* Cover upload */}
-            <div style={cardStyle}>
-              <span style={sectionLabel}>
-                Cover Image{" "}
+            <div style={cardSx}>
+              <span style={sectionTitleSx}>
+                Cover Image
                 <span
                   style={{
                     fontWeight: 400,
                     color: T.faint,
                     textTransform: "none",
                     letterSpacing: 0,
+                    marginLeft: 6,
                   }}
                 >
                   · Optional
@@ -378,7 +417,7 @@ const AddBookPage = () => {
                   fontSize: 12,
                   color: T.faint,
                   marginBottom: 14,
-                  marginTop: -10,
+                  marginTop: -12,
                 }}
               >
                 Upload a cover image for the book listing.
@@ -388,7 +427,7 @@ const AddBookPage = () => {
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 6,
+                  gap: 7,
                   background: T.white,
                   border: `1px solid ${T.border2}`,
                   borderRadius: T.radiusSm,
@@ -398,7 +437,7 @@ const AddBookPage = () => {
                   fontWeight: 600,
                   color: T.text2,
                   cursor: "pointer",
-                  marginBottom: 12,
+                  marginBottom: 14,
                 }}
               >
                 <UploadFile sx={{ fontSize: 15 }} />
@@ -426,7 +465,7 @@ const AddBookPage = () => {
                 {coverPreview ? (
                   <img
                     src={coverPreview}
-                    alt="Cover preview"
+                    alt="Preview"
                     style={{
                       maxHeight: 160,
                       objectFit: "contain",
@@ -439,7 +478,7 @@ const AddBookPage = () => {
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
-                      gap: 6,
+                      gap: 7,
                       color: T.faint,
                       fontSize: 11,
                     }}
@@ -451,45 +490,91 @@ const AddBookPage = () => {
               </div>
             </div>
 
-            {/* Live preview */}
-            <div style={cardStyle}>
-              <span style={sectionLabel}>Preview</span>
-              <h3
-                style={{
-                  fontFamily: "'Playfair Display',serif",
-                  fontSize: 18,
-                  fontWeight: 600,
-                  color: T.text,
-                  marginBottom: 4,
-                }}
-              >
-                {form.title || "Book Title"}
-              </h3>
-              <p style={{ fontSize: 13, color: T.faint, marginBottom: 10 }}>
-                {form.author || "Author name"}
-              </p>
+            {/* Live preview card */}
+            <div style={cardSx}>
+              <span style={sectionTitleSx}>Preview</span>
+
               <div
-                style={{
-                  fontSize: 12,
-                  color: T.muted,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 3,
-                  marginBottom: 10,
-                }}
+                style={{ display: "flex", alignItems: "flex-start", gap: 12 }}
               >
-                <span>
-                  Category:{" "}
-                  <strong>{selectedCatalog?.name || "General"}</strong>
-                </span>
-                <span>
-                  Added by: <strong>{uploaderName}</strong>
-                </span>
+                {/* Mini cover thumb */}
+                <div
+                  style={{
+                    width: 52,
+                    height: 68,
+                    flexShrink: 0,
+                    background: T.light,
+                    border: `1px solid ${T.border}`,
+                    borderRadius: 6,
+                    overflow: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {coverPreview ? (
+                    <img
+                      src={coverPreview}
+                      alt=""
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <LibraryAdd sx={{ fontSize: 20, color: "#c4bfb8" }} />
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: T.indigo,
+                      marginBottom: 4,
+                      display: "block",
+                    }}
+                  >
+                    {selectedCatalog?.name || "General"}
+                  </span>
+                  <h3
+                    style={{
+                      fontFamily: "'Playfair Display',serif",
+                      fontSize: 17,
+                      fontWeight: 600,
+                      color: form.title ? T.text : T.faint,
+                      lineHeight: 1.3,
+                      marginBottom: 3,
+                    }}
+                  >
+                    {form.title || "Book Title"}
+                  </h3>
+                  <p style={{ fontSize: 12, color: T.faint, marginBottom: 6 }}>
+                    {form.author || "Author name"}
+                  </p>
+                  <p style={{ fontSize: 11, color: T.faint }}>
+                    Added by{" "}
+                    <strong style={{ color: T.text2 }}>{uploaderName}</strong>
+                  </p>
+                </div>
               </div>
+
               {form.description && (
-                <p style={{ fontSize: 12, color: T.text2, lineHeight: 1.6 }}>
-                  {form.description.slice(0, 120)}
-                  {form.description.length > 120 ? "…" : ""}
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: T.text2,
+                    lineHeight: 1.6,
+                    marginTop: 12,
+                    paddingTop: 12,
+                    borderTop: `1px solid ${T.border}`,
+                  }}
+                >
+                  {form.description.slice(0, 140)}
+                  {form.description.length > 140 ? "…" : ""}
                 </p>
               )}
             </div>
@@ -505,31 +590,13 @@ const AddBookPage = () => {
             marginTop: 20,
           }}
         >
-          <button
-            type="button"
-            onClick={() => navigate("/books")}
-            style={{
-              ...btnBase,
-              background: T.white,
-              borderColor: T.border,
-              color: T.text2,
-            }}
-          >
+          <Btn variant="ghost" onClick={() => navigate("/books")}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              ...btnBase,
-              background: T.text,
-              color: T.white,
-              opacity: loading ? 0.5 : 1,
-            }}
-          >
+          </Btn>
+          <Btn variant="solid" type="submit" disabled={loading}>
             {loading ? (
               <>
-                <CircularProgress size={14} sx={{ color: "#fff" }} />
+                <CircularProgress size={13} sx={{ color: T.white }} />
                 Saving…
               </>
             ) : (
@@ -538,7 +605,7 @@ const AddBookPage = () => {
                 Add Book
               </>
             )}
-          </button>
+          </Btn>
         </div>
       </form>
     </div>
