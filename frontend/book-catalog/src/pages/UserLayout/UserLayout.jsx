@@ -9,9 +9,7 @@ const drawerWidth = 240;
 const UserLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const handleDrawerToggle = () => {
-    setMobileOpen((prev) => !prev);
-  };
+  const handleDrawerToggle = () => setMobileOpen((prev) => !prev);
 
   return (
     <Box
@@ -23,10 +21,7 @@ const UserLayout = () => {
         bgcolor: "#f9fafb",
       }}
     >
-      {/* Navbar */}
       <Navbar handleDrawerToggle={handleDrawerToggle} />
-
-      {/* Sidebar */}
       <UserSidebar
         mobileOpen={mobileOpen}
         handleDrawerToggle={handleDrawerToggle}
@@ -45,17 +40,18 @@ const UserLayout = () => {
           overflow: "hidden",
         }}
       >
-        {/* Offset for fixed AppBar */}
+        {/* AppBar offset */}
         <Toolbar sx={{ minHeight: "60px !important", flexShrink: 0 }} />
 
-        {/* Scrollable content area */}
+        {/* Scrollable content area — padding here so every page gets it */}
         <Box
           sx={{
             flexGrow: 1,
             height: "calc(100vh - 60px)",
-            width: "100%",
-            overflowY: "auto", // ← THE FIX: allow vertical scroll
+            overflowY: "auto",
             overflowX: "hidden",
+            px: { xs: 2, sm: 2, md: 3 },
+            py: 3,
           }}
         >
           <Outlet />
