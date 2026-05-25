@@ -1,17 +1,13 @@
 package com.example.demo.Services.impl;
 
-import com.example.demo.Services.PaymentService;
 import com.example.demo.Services.SubscriptionService;
 import com.example.demo.Services.UserService;
-import com.example.demo.domain.PaymentGateway;
-import com.example.demo.domain.PaymentType;
 import com.example.demo.exception.SubscriptionException;
 import com.example.demo.mapper.SubscriptionMapper;
 import com.example.demo.model.Subscription;
 import com.example.demo.model.SubscriptionPlan;
 import com.example.demo.model.User;
 import com.example.demo.payload.dto.SubscriptionDTO;
-import com.example.demo.payload.request.PaymentInitiateRequest;
 import com.example.demo.payload.response.PaymentInitiateResponse;
 import com.example.demo.repository.SubscriptionPlanRepository;
 import com.example.demo.repository.SubscriptionRepository;
@@ -28,7 +24,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SubscriptionImpl implements SubscriptionService {
 
-    private final PaymentService paymentService;
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final SubscriptionMapper subscriptionMapper;
@@ -48,35 +43,40 @@ public class SubscriptionImpl implements SubscriptionService {
                 .findActiveSubscriptionsByUserId(user.getId(), LocalDate.now());
         Subscription currentSubscription = activeSubs.isEmpty() ? null : activeSubs.get(0);
 
-        // Same plan — just re-initiate payment (e.g. renewal)
+        // Same plan — nothing to change.
         if (currentSubscription != null
                 && currentSubscription.getPlan() != null
                 && plan.getPlanCode().equalsIgnoreCase(currentSubscription.getPlan().getPlanCode())) {
-
-            PaymentInitiateRequest paymentInitiateRequest = PaymentInitiateRequest
-                    .builder()
-                    .userId(user.getId())
-                    .subscriptionId(currentSubscription.getId())
-                    .paymentType(PaymentType.MEMBERSHIP)
-                    .gateway(PaymentGateway.STRIPE)
-                    .amount(currentSubscription.getPrice())
-                    .description("Library Subscription - " + plan.getName())
-                    .build();
-            return paymentService.initiatePayment(paymentInitiateRequest);
+            return buildResponse(
+                currentSubscription,
+                "You are already on the " + plan.getName() + " plan."
+            );
         }
 
-        // Different plan — deactivate current
+        // Different plan — deactivate current and switch immediately.
         if (currentSubscription != null) {
             currentSubscription.setIsActive(false);
             currentSubscription.setCancelledAt(LocalDateTime.now());
-            currentSubscription.setCancellationReason("Upgraded to " + plan.getName());
+            currentSubscription.setCancellationReason(
+                    "FREE".equalsIgnoreCase(plan.getPlanCode())
+                            ? "Downgraded to Free"
+                            : "Upgraded to " + plan.getName()
+            );
             subscriptionRepository.save(currentSubscription);
         }
 
-        // Create new subscription (inactive until payment confirmed)
+        if ("FREE".equalsIgnoreCase(plan.getPlanCode())) {
+            Subscription freeSubscription = getOrCreateFallbackFreeSubscription(user.getId());
+            return buildResponse(
+                    freeSubscription,
+                    "Subscription changed to " + plan.getName() + " successfully."
+            );
+        }
+
+        // Create and activate the selected plan immediately.
         Subscription subscription = subscriptionMapper.toEntity(subscriptionDTO, plan, user);
         subscription.initializeFromPlan();
-        subscription.setIsActive(false);
+        subscription.setIsActive(true);
         subscription.setBooksCheckedOutThisMonth(
                 currentSubscription != null && currentSubscription.getBooksCheckedOutThisMonth() != null
                         ? currentSubscription.getBooksCheckedOutThisMonth()
@@ -88,19 +88,12 @@ public class SubscriptionImpl implements SubscriptionService {
                         : 0
         );
         subscription.setMonthlyQuotaResetDate(LocalDate.now().plusDays(30));
-        subscriptionRepository.save(subscription);
+        Subscription savedSubscription = subscriptionRepository.save(subscription);
 
-        PaymentInitiateRequest paymentInitiateRequest = PaymentInitiateRequest
-                .builder()
-                .userId(user.getId())
-                .subscriptionId(subscription.getId())
-                .paymentType(PaymentType.MEMBERSHIP)
-                .gateway(PaymentGateway.STRIPE)
-                .amount(subscription.getPrice())
-                .description("Library Subscription - " + plan.getName())
-                .build();
-
-        return paymentService.initiatePayment(paymentInitiateRequest);
+        return buildResponse(
+                savedSubscription,
+                "Subscription changed to " + plan.getName() + " successfully."
+        );
     }
 
     // ─────────────────────────────────────────────
@@ -260,5 +253,21 @@ public class SubscriptionImpl implements SubscriptionService {
         }
 
         throw new Exception("Plan not found!");
+    }
+
+    private PaymentInitiateResponse buildResponse(Subscription subscription, String message) {
+        return PaymentInitiateResponse.builder()
+                .paymentId(null)
+                .gateway(null)
+                .transactionId(null)
+                .razorpayOrderId(null)
+                .amount(subscription != null ? subscription.getPrice() : null)
+                .description(subscription != null && subscription.getPlan() != null
+                        ? "Library Subscription - " + subscription.getPlan().getName()
+                        : null)
+                .checkoutUrl(null)
+                .message(message)
+                .success(true)
+                .build();
     }
 }

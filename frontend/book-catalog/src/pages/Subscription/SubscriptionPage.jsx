@@ -10,7 +10,6 @@ import {
   AutoAwesome,
 } from "@mui/icons-material";
 import {
-  activateSubscription,
   cancelSubscription,
   getActiveSubscription,
   getAuthUser,
@@ -512,10 +511,10 @@ const PlanCard = ({ plan, index, activePlanCode, notes, onSubscribe }) => {
           {isActive
             ? isFreePlan(plan)
               ? "Your current plan"
-              : "Manage Plan"
+              : "Current plan"
             : isFreePlan(plan)
-              ? "Free plan"
-              : `Subscribe to ${plan.name} →`}
+              ? "Switch to Free"
+              : `Switch to ${plan.name} →`}
         </button>
       </div>
     </div>
@@ -571,57 +570,6 @@ const SubscriptionPage = () => {
     load();
   }, []);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const stripeStatus = params.get("stripe");
-
-    if (!stripeStatus) return;
-
-    const clearStripeParams = () => {
-      ["stripe", "paymentId", "subscriptionId", "session_id"].forEach((k) => {
-        params.delete(k);
-      });
-      const next = params.toString();
-      const nextUrl = `${window.location.pathname}${next ? `?${next}` : ""}`;
-      window.history.replaceState({}, "", nextUrl);
-    };
-
-    const handleStripeReturn = async () => {
-      if (stripeStatus === "cancelled") {
-        setMessage("Payment was cancelled.");
-        clearStripeParams();
-        return;
-      }
-
-      if (stripeStatus !== "success") {
-        clearStripeParams();
-        return;
-      }
-
-      const subscriptionId = Number(params.get("subscriptionId"));
-      const paymentId = Number(params.get("paymentId"));
-
-      if (!subscriptionId || !paymentId) {
-        clearStripeParams();
-        return;
-      }
-
-      try {
-        await activateSubscription(subscriptionId, paymentId);
-        setMessage("Payment successful. Subscription activated.");
-        await load();
-      } catch (err) {
-        setError(
-          err.message || "Could not activate subscription after payment",
-        );
-      } finally {
-        clearStripeParams();
-      }
-    };
-
-    handleStripeReturn();
-  }, []);
-
   const activePlanCode = activeSub?.planCode || "FREE";
   const effectiveSub = activeSub || FREE_SUBSCRIPTION;
   const isFree = normalizePlanCode(activePlanCode) === "FREE";
@@ -649,7 +597,12 @@ const SubscriptionPage = () => {
           return;
         }
 
-        setMessage("Cancel your current plan to return to Free.");
+        const res = await cancelSubscription(
+          activeSub.id,
+          "Downgraded to Free",
+        );
+        setMessage(res?.message || "Subscription changed to Free");
+        await load();
         return;
       }
 
@@ -664,30 +617,15 @@ const SubscriptionPage = () => {
       };
 
       const res = await subscribe(payload);
-      setMessage(res?.message || "Subscription checkout initiated");
-      if (res?.checkoutUrl) {
-        window.location.assign(res.checkoutUrl);
-        return;
-      }
+      setMessage(res?.message || `Subscription changed to ${plan.name}`);
       await load();
     } catch (err) {
-      setError(err.message || "Could not start subscription checkout");
+      setError(err.message || "Could not change subscription");
     }
   };
 
   const handleActivate = async () => {
-    setError("");
-    try {
-      if (!activeSub?.id) return;
-      const res = await activateSubscription(
-        activeSub.id,
-        activeSub?.lastPaymentId || activeSub?.paymentId || "",
-      );
-      setMessage(res?.message || "Subscription activated");
-      await load();
-    } catch (err) {
-      setError(err.message || "Could not activate subscription");
-    }
+    setMessage("This plan is already active.");
   };
 
   const handleCancel = async () => {
