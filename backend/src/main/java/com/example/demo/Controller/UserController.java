@@ -4,6 +4,7 @@ import com.example.demo.Services.UserService;
 import com.example.demo.model.User;
 import com.example.demo.payload.dto.UserDTO;
 import com.example.demo.payload.request.UpdateProfileRequest;
+import com.example.demo.payload.response.UserProfileResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.core.Authentication;
 
-import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -30,8 +30,8 @@ public class UserController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<List<User>> getUserProfile() throws Exception {
-        return ResponseEntity.ok(Collections.singletonList(userService.getCurrentUser()));
+    public ResponseEntity<UserProfileResponse> getUserProfile() throws Exception {
+        return ResponseEntity.ok(userService.getCurrentUserProfile());
     }
 
     @PutMapping("/profile")
