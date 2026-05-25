@@ -19,6 +19,6 @@ public interface SubscriptionService {
 
     List<SubscriptionDTO> getAllSubscriptions(Pageable pageable);
 
-    void  deactivateExpiredSubscriptions() throws Exception;
+    void deactivateExpiredSubscriptions() throws Exception;
 
 }

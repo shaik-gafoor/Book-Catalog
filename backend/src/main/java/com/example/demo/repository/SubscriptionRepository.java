@@ -7,15 +7,15 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
 
     @Query("select s from Subscription s where s.user.id = :userId AND " +
             "s.isActive = true and " +
-            "s.startDate<=:today and s.endDate>=:today"
+            "s.startDate<=:today and s.endDate>=:today " +
+            "order by s.createdAt desc"
     )
-    Optional<Subscription> findActiveSubscriptionByUserId(
+    List<Subscription> findActiveSubscriptionsByUserId(
             @Param("userId") Long userId,
             @Param("today") LocalDate today
     );
@@ -26,6 +26,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
             @Param("today") LocalDate today
     );
 
-        List<Subscription> findAllByIsActiveTrue();
+    List<Subscription> findAllByIsActiveTrue();
 
+    List<Subscription> findAllByUserIdAndPlanCode(Long userId, String planCode);
 }
