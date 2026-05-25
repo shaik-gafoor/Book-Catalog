@@ -571,6 +571,57 @@ const SubscriptionPage = () => {
     load();
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const stripeStatus = params.get("stripe");
+
+    if (!stripeStatus) return;
+
+    const clearStripeParams = () => {
+      ["stripe", "paymentId", "subscriptionId", "session_id"].forEach((k) => {
+        params.delete(k);
+      });
+      const next = params.toString();
+      const nextUrl = `${window.location.pathname}${next ? `?${next}` : ""}`;
+      window.history.replaceState({}, "", nextUrl);
+    };
+
+    const handleStripeReturn = async () => {
+      if (stripeStatus === "cancelled") {
+        setMessage("Payment was cancelled.");
+        clearStripeParams();
+        return;
+      }
+
+      if (stripeStatus !== "success") {
+        clearStripeParams();
+        return;
+      }
+
+      const subscriptionId = Number(params.get("subscriptionId"));
+      const paymentId = Number(params.get("paymentId"));
+
+      if (!subscriptionId || !paymentId) {
+        clearStripeParams();
+        return;
+      }
+
+      try {
+        await activateSubscription(subscriptionId, paymentId);
+        setMessage("Payment successful. Subscription activated.");
+        await load();
+      } catch (err) {
+        setError(
+          err.message || "Could not activate subscription after payment",
+        );
+      } finally {
+        clearStripeParams();
+      }
+    };
+
+    handleStripeReturn();
+  }, []);
+
   const activePlanCode = activeSub?.planCode || "FREE";
   const effectiveSub = activeSub || FREE_SUBSCRIPTION;
   const isFree = normalizePlanCode(activePlanCode) === "FREE";
@@ -602,10 +653,22 @@ const SubscriptionPage = () => {
         return;
       }
 
-      const res = await subscribe({ userId, planId: plan.id, notes });
+      const numericPlanId = Number(plan.id);
+      const payload = {
+        userId,
+        notes,
+        planCode: plan.planCode,
+        ...(Number.isFinite(numericPlanId) && numericPlanId > 0
+          ? { planId: numericPlanId }
+          : {}),
+      };
+
+      const res = await subscribe(payload);
       setMessage(res?.message || "Subscription checkout initiated");
-      if (res?.checkoutUrl)
-        window.open(res.checkoutUrl, "_blank", "noopener,noreferrer");
+      if (res?.checkoutUrl) {
+        window.location.assign(res.checkoutUrl);
+        return;
+      }
       await load();
     } catch (err) {
       setError(err.message || "Could not start subscription checkout");
