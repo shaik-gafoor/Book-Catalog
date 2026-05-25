@@ -1,6 +1,5 @@
 package com.example.demo.Services.impl;
 
-
 import com.example.demo.Services.UserService;
 import com.example.demo.mapper.UserMapper;
 import com.example.demo.mapper.SubscriptionMapper;
@@ -30,7 +29,6 @@ public class UserServiceImpl implements UserService {
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final SubscriptionMapper subscriptionMapper;
 
-
     @Override
     public User getCurrentUser() throws Exception {
         String principal = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -41,7 +39,7 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             user = userRepository.findByFullNameIgnoreCase(principal);
         }
-        if(user == null){
+        if (user == null) {
             throw new Exception("User not found");
         }
         return user;
@@ -66,9 +64,17 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserProfileResponse getCurrentUserProfile(Long userId) throws Exception {
         User currentUser = getCurrentUser(userId);
-        Subscription activeSubscription = subscriptionRepository
-                .findActiveSubscriptionByUserId(currentUser.getId(), LocalDate.now())
-                .orElseGet(() -> createFreeSubscription(currentUser));
+
+        // ✅ Use list-based query — no NonUniqueResultException
+        List<Subscription> activeSubs = subscriptionRepository
+                .findActiveSubscriptionsByUserId(currentUser.getId(), LocalDate.now());
+
+        Subscription activeSubscription;
+        if (!activeSubs.isEmpty()) {
+            activeSubscription = activeSubs.get(0); // most recent active
+        } else {
+            activeSubscription = getOrCreateFreeSubscription(currentUser);
+        }
 
         return new UserProfileResponse(
                 UserMapper.toDTO(currentUser),
@@ -76,12 +82,34 @@ public class UserServiceImpl implements UserService {
         );
     }
 
-    private Subscription createFreeSubscription(User user) {
+    /**
+     * Finds or reactivates an existing FREE subscription instead of
+     * always inserting a new row (which caused duplicate-result crashes).
+     */
+    private Subscription getOrCreateFreeSubscription(User user) {
         SubscriptionPlan freePlan = subscriptionPlanRepository.findByPlanCode("FREE");
-        if (freePlan == null) {
-            return null;
+        if (freePlan == null) return null;
+
+        // ✅ Check for existing FREE sub — reactivate instead of creating duplicate
+        List<Subscription> existingFreeSubs = subscriptionRepository
+                .findAllByUserIdAndPlanCode(user.getId(), "FREE");
+
+        if (!existingFreeSubs.isEmpty()) {
+            Subscription existing = existingFreeSubs.get(existingFreeSubs.size() - 1);
+            if (existing.getIsActive()) {
+                return existing;
+            }
+            // Reactivate the existing one
+            existing.setIsActive(true);
+            existing.setStartDate(LocalDate.now());
+            existing.setEndDate(LocalDate.now().plusYears(100));
+            existing.setMonthlyQuotaResetDate(LocalDate.now().plusDays(30));
+            existing.setCancelledAt(null);
+            existing.setCancellationReason(null);
+            return subscriptionRepository.save(existing);
         }
 
+        // No FREE sub at all — create one
         Subscription subscription = Subscription.builder()
                 .user(user)
                 .plan(freePlan)
@@ -97,7 +125,6 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<UserDTO> getAllUsers() {
         List<User> users = userRepository.findAll();
-
         return users.stream().map(UserMapper::toDTO).collect(Collectors.toList());
     }
 
@@ -111,17 +138,17 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDTO updateProfile(String email, UpdateProfileRequest request) throws Exception {
         User user = userRepository.findByEmail(email);
-        if(user == null){
+        if (user == null) {
             throw new Exception("User not found");
         }
 
-        if(request.getFullName() != null){
+        if (request.getFullName() != null) {
             user.setFullName(request.getFullName());
         }
-        if(request.getPhone() != null){
+        if (request.getPhone() != null) {
             user.setPhone(request.getPhone());
         }
-        if(request.getEmail() != null){
+        if (request.getEmail() != null) {
             user.setEmail(request.getEmail());
         }
 
