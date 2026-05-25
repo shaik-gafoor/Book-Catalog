@@ -120,6 +120,21 @@ const PLAN_VISUALS = [
   },
 ];
 
+const CURRENT_PLAN_THEMES = {
+  FREE: {
+    gradient: "linear-gradient(145deg,#1e293b 0%,#0f172a 100%)",
+    shadow: "0 12px 40px rgba(0,0,0,.2)",
+  },
+  BASIC: {
+    gradient: "linear-gradient(145deg,#1d4ed8 0%,#2563eb 100%)",
+    shadow: "0 12px 40px rgba(29,78,216,.35)",
+  },
+  PREMIUM: {
+    gradient: "linear-gradient(145deg,#4f46e5 0%,#6d28d9 100%)",
+    shadow: "0 12px 40px rgba(79,70,229,.35)",
+  },
+};
+
 const FREE_SUBSCRIPTION = {
   planCode: "FREE",
   planName: "Free",
@@ -571,10 +586,11 @@ const SubscriptionPage = () => {
   }, []);
 
   const activePlanCode = activeSub?.planCode || "FREE";
+  const normalizedActivePlanCode = normalizePlanCode(activePlanCode);
   const effectiveSub = activeSub || FREE_SUBSCRIPTION;
-  const isFree = normalizePlanCode(activePlanCode) === "FREE";
-  const isBasic = activeSub?.planCode === "BASIC";
-  const isPremium = activeSub?.planCode === "PREMIUM";
+  const isFree = normalizedActivePlanCode === "FREE";
+  const currentPlanTheme =
+    CURRENT_PLAN_THEMES[normalizedActivePlanCode] || CURRENT_PLAN_THEMES.FREE;
   const canReserve = !isFree;
   const canWishlist = !isFree;
   const canRenew = !isFree;
@@ -765,13 +781,13 @@ const SubscriptionPage = () => {
       {effectiveSub && (
         <div
           style={{
-            background: "linear-gradient(145deg,#1e293b 0%,#0f172a 100%)",
+            background: currentPlanTheme.gradient,
             borderRadius: T.radius,
             padding: "26px 30px",
             marginBottom: 32,
             position: "relative",
             overflow: "hidden",
-            boxShadow: "0 12px 40px rgba(0,0,0,.2)",
+            boxShadow: currentPlanTheme.shadow,
             animation: "subFadeUp .38s ease .05s both",
           }}
         >

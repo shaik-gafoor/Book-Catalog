@@ -179,7 +179,10 @@ const LoanCard = ({ loan, onRenew, onCheckin, activeSub, animIndex = 0 }) => {
   const coverImage = loan.bookCoverImage || loan.coverImageUrl;
   const subscription = activeSub || FREE_SUBSCRIPTION;
   const isFree =
-    !activeSub || String(subscription.planCode || "FREE") === "FREE";
+    !activeSub ||
+    String(subscription.planCode || "FREE")
+      .trim()
+      .toUpperCase() === "FREE";
   const canAct =
     (loan.status === "CHECKED_OUT" ||
       loan.status === "ACTIVE" ||

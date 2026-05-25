@@ -168,7 +168,10 @@ const BookCard = ({
   const isAvailable = (book.availableCopies ?? 0) > 0;
   const subscription = activeSub || FREE_SUBSCRIPTION;
   const isFree =
-    !activeSub || String(subscription.planCode || "FREE") === "FREE";
+    !activeSub ||
+    String(subscription.planCode || "FREE")
+      .trim()
+      .toUpperCase() === "FREE";
   const atConcurrentLimit =
     (subscription.currentConcurrentCheckouts ?? 0) >=
     (subscription.maxConcurrentCheckouts ?? 1);
