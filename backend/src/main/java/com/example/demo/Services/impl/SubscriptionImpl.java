@@ -168,6 +168,9 @@ public class SubscriptionImpl implements SubscriptionService {
         subscription.setCancelledAt(LocalDateTime.now());
         subscription.setCancellationReason(reason != null ? reason : "Cancelled by user");
         subscription = subscriptionRepository.save(subscription);
+        if (subscription.getPlan() == null || !"FREE".equalsIgnoreCase(subscription.getPlanCode())) {
+            createFallbackFreeSubscription(subscription.getUser().getId());
+        }
         return subscriptionMapper.toDTO(subscription);
     }
 

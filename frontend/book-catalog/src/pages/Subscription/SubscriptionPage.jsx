@@ -14,6 +14,7 @@ import {
   cancelSubscription,
   getActiveSubscription,
   getAuthUser,
+  getProfile,
   getSubscriptionPlans,
   subscribe,
 } from "../../api/libraryApi";
@@ -135,6 +136,15 @@ const FREE_SUBSCRIPTION = {
   daysRemaining: 36500,
 };
 
+const normalizePlanCode = (value) =>
+  String(value || "")
+    .trim()
+    .toUpperCase();
+
+const getPlanCode = (plan) => plan?.planCode || plan?.id || "";
+
+const isFreePlan = (plan) => normalizePlanCode(getPlanCode(plan)) === "FREE";
+
 const getDaysUntilReset = (dateValue) => {
   if (!dateValue) return null;
   const target = new Date(dateValue);
@@ -225,10 +235,12 @@ const Spinner = () => (
 /* ─────────────────────────────────────────────
    PlanCard — extracted so hooks are at top level
 ───────────────────────────────────────────── */
-const PlanCard = ({ plan, index, activePlanId, notes, onSubscribe }) => {
+const PlanCard = ({ plan, index, activePlanCode, notes, onSubscribe }) => {
   const [hov, setHov] = useState(false);
   const vis = PLAN_VISUALS[index % PLAN_VISUALS.length];
-  const isActive = activePlanId && String(activePlanId) === String(plan.id);
+  const currentPlanCode = normalizePlanCode(activePlanCode || "FREE");
+  const planCode = normalizePlanCode(getPlanCode(plan));
+  const isActive = currentPlanCode === planCode;
 
   return (
     <div
@@ -498,9 +510,11 @@ const PlanCard = ({ plan, index, activePlanId, notes, onSubscribe }) => {
           }}
         >
           {isActive
-            ? "Manage Plan"
-            : plan.price === 0
-              ? "Get started — free"
+            ? isFreePlan(plan)
+              ? "Your current plan"
+              : "Manage Plan"
+            : isFreePlan(plan)
+              ? "Free plan"
               : `Subscribe to ${plan.name} →`}
         </button>
       </div>
@@ -522,7 +536,6 @@ const SubscriptionPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [cancelConfirm, setCancelConfirm] = useState(false);
   const [notesFocused, setNotesFocused] = useState(false);
 
   /* ── data fetching ── */
@@ -530,8 +543,9 @@ const SubscriptionPage = () => {
     setLoading(true);
     setError("");
     try {
-      const [planData, subData] = await Promise.all([
+      const [planData, profileData, subData] = await Promise.all([
         getSubscriptionPlans(),
+        getProfile().catch(() => null),
         getActiveSubscription(userId),
       ]);
 
@@ -540,7 +554,11 @@ const SubscriptionPage = () => {
         ? planData
         : planData?.content || [];
       setPlans(fetched.length > 0 ? fetched : STATIC_PLANS);
-      setActiveSub(subData || null);
+      const resolvedSubscription =
+        profileData?.activeSubscription || subData || null;
+      setActiveSub(
+        isFreePlan(resolvedSubscription) ? null : resolvedSubscription,
+      );
     } catch (err) {
       setError(err.message || "Failed to load subscription data");
       setPlans(STATIC_PLANS); // always show plans even on error
@@ -553,9 +571,9 @@ const SubscriptionPage = () => {
     load();
   }, []);
 
-  const activePlanId = activeSub?.planId;
+  const activePlanCode = activeSub?.planCode || "FREE";
   const effectiveSub = activeSub || FREE_SUBSCRIPTION;
-  const isFree = !activeSub || effectiveSub.planCode === "FREE";
+  const isFree = normalizePlanCode(activePlanCode) === "FREE";
   const isBasic = activeSub?.planCode === "BASIC";
   const isPremium = activeSub?.planCode === "PREMIUM";
   const canReserve = !isFree;
@@ -574,6 +592,16 @@ const SubscriptionPage = () => {
   const handleSubscribe = async (plan) => {
     setError("");
     try {
+      if (isFreePlan(plan)) {
+        if (isFree) {
+          setMessage("Your current plan is already Free.");
+          return;
+        }
+
+        setMessage("Cancel your current plan to return to Free.");
+        return;
+      }
+
       const res = await subscribe({ userId, planId: plan.id, notes });
       setMessage(res?.message || "Subscription checkout initiated");
       if (res?.checkoutUrl)
@@ -603,9 +631,13 @@ const SubscriptionPage = () => {
     setError("");
     try {
       if (!activeSub?.id) return;
+      if (isFree) {
+        setMessage("Your current plan is already Free.");
+        return;
+      }
+
       const res = await cancelSubscription(activeSub.id, reason || undefined);
       setMessage(res?.message || "Subscription cancelled");
-      setCancelConfirm(false);
       setReason("");
       await load();
     } catch (err) {
@@ -991,26 +1023,28 @@ const SubscriptionPage = () => {
                 >
                   <OpenInNew sx={{ fontSize: 13 }} /> Manage
                 </button>
-                <button
-                  className="sub-cancel-btn"
-                  onClick={() => setCancelConfirm(true)}
-                  style={{
-                    fontFamily: "inherit",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    padding: "9px 17px",
-                    borderRadius: T.radiusXs,
-                    cursor: "pointer",
-                    border: "1px solid rgba(255,107,107,.4)",
-                    background: "rgba(255,80,80,.1)",
-                    color: "#fca5a5",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 5,
-                  }}
-                >
-                  <Close sx={{ fontSize: 13 }} /> Cancel Plan
-                </button>
+                {!isFree && (
+                  <button
+                    className="sub-cancel-btn"
+                    onClick={handleCancel}
+                    style={{
+                      fontFamily: "inherit",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      padding: "9px 17px",
+                      borderRadius: T.radiusXs,
+                      cursor: "pointer",
+                      border: "1px solid rgba(255,107,107,.4)",
+                      background: "rgba(255,80,80,.1)",
+                      color: "#fca5a5",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                    }}
+                  >
+                    <Close sx={{ fontSize: 13 }} /> Cancel Plan
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1115,7 +1149,7 @@ const SubscriptionPage = () => {
               key={plan.id}
               plan={plan}
               index={i}
-              activePlanId={activePlanId}
+              activePlanCode={activePlanCode}
               notes={notes}
               onSubscribe={handleSubscribe}
             />

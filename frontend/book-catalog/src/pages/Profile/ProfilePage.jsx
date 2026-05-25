@@ -177,7 +177,7 @@ const ProfilePage = () => {
       setError("");
       try {
         const data = await getProfile();
-        const value = Array.isArray(data) ? data[0] : data;
+        const value = Array.isArray(data) ? data[0] : data?.user || data;
         setProfile(value || null);
         if (value)
           setForm({
