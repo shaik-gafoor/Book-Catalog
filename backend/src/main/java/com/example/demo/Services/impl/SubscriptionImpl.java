@@ -11,7 +11,6 @@ import com.example.demo.model.Subscription;
 import com.example.demo.model.SubscriptionPlan;
 import com.example.demo.model.User;
 import com.example.demo.payload.dto.SubscriptionDTO;
-import com.example.demo.payload.dto.UserDTO;
 import com.example.demo.payload.request.PaymentInitiateRequest;
 import com.example.demo.payload.response.PaymentInitiateResponse;
 import com.example.demo.repository.SubscriptionPlanRepository;
@@ -19,6 +18,7 @@ import com.example.demo.repository.SubscriptionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -50,9 +50,7 @@ public class SubscriptionImpl implements SubscriptionService {
 
         User user = userService.getCurrentUser();
 
-        SubscriptionPlan plan =subscriptionPlanRepository
-                .findById(subscriptionDTO.getPlanId())
-                .orElseThrow(() -> new Exception("Plan not found!"));
+        SubscriptionPlan plan = resolvePlan(subscriptionDTO);
 
         Subscription currentSubscription = subscriptionRepository
             .findActiveSubscriptionByUserId(user.getId(), LocalDate.now())
@@ -66,7 +64,7 @@ public class SubscriptionImpl implements SubscriptionService {
                 .userId(user.getId())
                 .subscriptionId(currentSubscription.getId())
                 .paymentType(PaymentType.MEMBERSHIP)
-                .gateway(PaymentGateway.RAZORPAY)
+                .gateway(PaymentGateway.STRIPE)
                 .amount(currentSubscription.getPrice())
                 .description("Library Subscription - " + plan.getName())
                 .build();
@@ -84,7 +82,7 @@ public class SubscriptionImpl implements SubscriptionService {
 
         Subscription subscription = subscriptionMapper.toEntity(subscriptionDTO,plan,user);
         subscription.initializeFromPlan();
-        subscription.setIsActive(true);
+        subscription.setIsActive(false);
         subscription.setBooksCheckedOutThisMonth(
             currentSubscription != null && currentSubscription.getBooksCheckedOutThisMonth() != null
                 ? currentSubscription.getBooksCheckedOutThisMonth()
@@ -105,11 +103,28 @@ public class SubscriptionImpl implements SubscriptionService {
                 .userId(user.getId())
                 .subscriptionId(subscription.getId())
                 .paymentType(PaymentType.MEMBERSHIP)
-                .gateway(PaymentGateway.RAZORPAY)
+                .gateway(PaymentGateway.STRIPE)
                 .amount(subscription.getPrice())
                 .description("Library Subscription - " + plan.getName())
                 .build();
          return paymentService.initiatePayment(paymentInitiateRequest);
+    }
+
+    private SubscriptionPlan resolvePlan(SubscriptionDTO subscriptionDTO) throws Exception {
+        if (subscriptionDTO.getPlanId() != null) {
+            return subscriptionPlanRepository
+                    .findById(subscriptionDTO.getPlanId())
+                    .orElseThrow(() -> new Exception("Plan not found!"));
+        }
+
+        if (StringUtils.hasText(subscriptionDTO.getPlanCode())) {
+            SubscriptionPlan byCode = subscriptionPlanRepository.findByPlanCode(subscriptionDTO.getPlanCode());
+            if (byCode != null) {
+                return byCode;
+            }
+        }
+
+        throw new Exception("Plan not found!");
     }
 
     @Override

@@ -167,6 +167,7 @@ const ProfilePage = () => {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const fileRef = useRef();
+  const authUser = getAuthUser();
 
   /* form state */
   const [form, setForm] = useState({ fullName: "", phone: "", email: "" });

@@ -55,6 +55,11 @@ const getInitials = (user) => {
   return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
 };
 
+const sanitizeAvatarSrc = (src) => {
+  if (!src || typeof src !== "string") return "";
+  return src.startsWith("blob:") ? "" : src;
+};
+
 const getGreetingLabel = () => {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
@@ -475,7 +480,9 @@ const Navbar = ({ handleDrawerToggle }) => {
             sx={{ ml: 0.5, p: 0.5 }}
           >
             <Avatar
-              src={user?.profilePicture || user?.avatarUrl || user?.photoUrl}
+              src={sanitizeAvatarSrc(
+                user?.profilePicture || user?.avatarUrl || user?.photoUrl,
+              )}
               sx={{
                 width: 34,
                 height: 34,

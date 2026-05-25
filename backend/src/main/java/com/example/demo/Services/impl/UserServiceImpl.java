@@ -33,8 +33,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User getCurrentUser() throws Exception {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email);
+        String principal = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmailIgnoreCase(principal);
+        if (user == null) {
+            user = userRepository.findByEmail(principal);
+        }
+        if (user == null) {
+            user = userRepository.findByFullNameIgnoreCase(principal);
+        }
         if(user == null){
             throw new Exception("User not found");
         }
@@ -42,8 +48,24 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public User getCurrentUser(Long userId) throws Exception {
+        if (userId != null) {
+            User byId = userRepository.findById(userId).orElse(null);
+            if (byId != null) {
+                return byId;
+            }
+        }
+        return getCurrentUser();
+    }
+
+    @Override
     public UserProfileResponse getCurrentUserProfile() throws Exception {
-        User currentUser = getCurrentUser();
+        return getCurrentUserProfile(null);
+    }
+
+    @Override
+    public UserProfileResponse getCurrentUserProfile(Long userId) throws Exception {
+        User currentUser = getCurrentUser(userId);
         Subscription activeSubscription = subscriptionRepository
                 .findActiveSubscriptionByUserId(currentUser.getId(), LocalDate.now())
                 .orElseGet(() -> createFreeSubscription(currentUser));

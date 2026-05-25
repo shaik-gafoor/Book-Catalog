@@ -43,4 +43,13 @@ public class GlobalException {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ApiResponse(message,false));
     }
+
+        @ExceptionHandler(Exception.class)
+        public ResponseEntity<ApiResponse> handleException(Exception e){
+        String message = (e.getMessage() == null || e.getMessage().isBlank())
+            ? "Unexpected server error"
+            : e.getMessage();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(new ApiResponse(message,false));
+        }
 }
