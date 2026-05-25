@@ -15,11 +15,14 @@ import { alpha } from "@mui/material/styles";
 import { MenuBook, Logout } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { navigationItems, secondaryItems } from "./navigationItems";
-import { clearAuthSession } from "../../api/libraryApi";
+import { clearAuthSession, getAuthUser } from "../../api/libraryApi";
 
 const SidebarDrawer = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const currentUser = getAuthUser();
+  const isAdmin =
+    String(currentUser?.role || "").toUpperCase() === "ROLE_ADMIN";
 
   const isActive = (path) => {
     if (path === "/") return location.pathname === "/";
@@ -176,9 +179,11 @@ const SidebarDrawer = () => {
         </Typography>
 
         <List disablePadding>
-          {navigationItems.map((item, index) => (
-            <NavButton key={index} item={item} />
-          ))}
+          {navigationItems
+            .filter((item) => !item.adminOnly || isAdmin)
+            .map((item, index) => (
+              <NavButton key={index} item={item} />
+            ))}
         </List>
 
         <Divider sx={{ my: 2, mx: 2, borderColor: "#f3f4f6" }} />

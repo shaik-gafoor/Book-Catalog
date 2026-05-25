@@ -29,6 +29,8 @@ public class UserDTO  {
     private String username;
 
     private LocalDateTime lastLogin;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
 
 }

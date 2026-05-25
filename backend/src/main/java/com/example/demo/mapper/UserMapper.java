@@ -17,6 +17,8 @@ public class UserMapper {
         userDTO.setFullName(user.getFullName());
         userDTO.setPhone(user.getPhone());
         userDTO.setLastLogin(user.getLastLogin());
+        userDTO.setCreatedAt(user.getCreatedAt());
+        userDTO.setUpdatedAt(user.getUpdatedAt());
         UserRole role = UserRole.ROLE_USER;
         if (user.getRole() != null && !user.getRole().isBlank()) {
             try {

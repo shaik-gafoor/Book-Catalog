@@ -857,6 +857,8 @@ export const createFine = (payload) =>
   request("/api/fines", { method: "POST", body: payload });
 export const payFine = (id, transactionId) =>
   request(`/api/fines/${id}/pay`, { method: "POST", query: { transactionId } });
+export const deleteFine = (id) =>
+  request(`/api/fines/${id}`, { method: "DELETE" });
 export const waiveFine = (payload) =>
   request("/api/fines/waive", { method: "POST", body: payload });
 export const getMyFines = (params) =>
@@ -892,8 +894,10 @@ export const getActiveSubscription = (userId) =>
   request("/api/subscriptions/user/active", { query: { userId } }).catch(
     () => null,
   );
-export const getAllSubscriptions = () =>
-  request("/api/subscriptions/admin").catch(() => emptyPageResponse());
+export const getAllSubscriptions = (params) =>
+  request("/api/subscriptions/admin", { query: params }).catch(() =>
+    emptyPageResponse(),
+  );
 export const deactivateExpiredSubscriptions = () =>
   request("/api/subscriptions/admin/deactivate-expired");
 export const cancelSubscription = (subscriptionId, reason) =>
@@ -930,5 +934,9 @@ export const removeFromWishlist = (bookId) =>
   request(`/api/wishlist/remove/${bookId}`, { method: "DELETE" });
 export const getWishlist = (params) =>
   request("/api/wishlist/my-wishlist", { query: params }).catch(() =>
+    emptyPageResponse(),
+  );
+export const getAllWishlists = (params) =>
+  request("/api/wishlist/admin", { query: params }).catch(() =>
     emptyPageResponse(),
   );

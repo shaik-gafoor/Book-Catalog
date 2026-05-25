@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { CircularProgress } from "@mui/material";
 import {
   Favorite,
@@ -9,8 +9,14 @@ import {
   CalendarToday,
   LocalOffer,
   Tag,
+  PeopleAlt,
 } from "@mui/icons-material";
-import { getWishlist, removeFromWishlist } from "../../api/libraryApi";
+import {
+  getAllWishlists,
+  getAuthUser,
+  getWishlist,
+  removeFromWishlist,
+} from "../../api/libraryApi";
 import { formatDateTime, formatCurrency } from "../../utils/format";
 
 /* ── tokens ── */
@@ -27,6 +33,46 @@ const T = {
   indigo: "#6366f1",
   radius: "14px",
   radiusSm: "8px",
+};
+
+const STATUS_TONES = {
+  ACTIVE: {
+    bg: "#d1fae5",
+    fg: "#065f46",
+  },
+  PENDING: {
+    bg: "#fef3c7",
+    fg: "#92400e",
+  },
+};
+
+const getWishlistStatus = (entry) => {
+  const book = entry?.book || {};
+  const activeBook =
+    book.active !== false && Number(book.availableCopies || 0) > 0;
+  return activeBook ? "ACTIVE" : "PENDING";
+};
+
+const GroupPill = ({ children, status = "ACTIVE" }) => {
+  const tone = STATUS_TONES[status] || STATUS_TONES.PENDING;
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "4px 10px",
+        borderRadius: 999,
+        background: tone.bg,
+        color: tone.fg,
+        fontSize: 11,
+        fontWeight: 700,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {children}
+    </span>
+  );
 };
 
 /* ── keyframe injected once ── */
@@ -409,16 +455,78 @@ const WishlistCard = ({ entry, onRemove, index }) => {
    WISHLIST PAGE
 ══════════════════════════════════════════════════ */
 const WishlistPage = () => {
+  const currentUser = getAuthUser();
+  const isAdmin =
+    String(currentUser?.role || "").toUpperCase() === "ROLE_ADMIN";
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState("");
+
+  const adminWishlistUsers = useMemo(() => {
+    if (!isAdmin) return [];
+
+    const userMap = new Map();
+    wishlist.forEach((entry) => {
+      if (!entry?.userId) return;
+      const key = String(entry.userId);
+      if (!userMap.has(key)) {
+        userMap.set(key, {
+          id: entry.userId,
+          fullName:
+            entry.userFullName || entry.userName || `User #${entry.userId}`,
+          email: entry.userEmail || entry.email || `User #${entry.userId}`,
+          entries: [],
+        });
+      }
+      userMap.get(key).entries.push(entry);
+    });
+
+    return Array.from(userMap.values())
+      .map((user) => {
+        const activeEntries = user.entries.filter(
+          (entry) => getWishlistStatus(entry) === "ACTIVE",
+        );
+        const pendingEntries = user.entries.filter(
+          (entry) => getWishlistStatus(entry) === "PENDING",
+        );
+
+        return {
+          ...user,
+          activeCount: activeEntries.length,
+          pendingCount: pendingEntries.length,
+          totalCount: user.entries.length,
+          latestEntry: [...user.entries].sort(
+            (left, right) =>
+              new Date(right.addedAt || 0).getTime() -
+              new Date(left.addedAt || 0).getTime(),
+          )[0],
+        };
+      })
+      .sort((left, right) =>
+        (left.fullName || "").localeCompare(right.fullName || ""),
+      );
+  }, [isAdmin, wishlist]);
+
+  const selectedAdminUser = useMemo(() => {
+    if (!isAdmin) return null;
+    return (
+      adminWishlistUsers.find(
+        (user) => String(user.id) === String(selectedUserId),
+      ) ||
+      adminWishlistUsers[0] ||
+      null
+    );
+  }, [adminWishlistUsers, isAdmin, selectedUserId]);
 
   const loadWishlist = async () => {
     setLoading(true);
     setError("");
     try {
-      const data = await getWishlist({ page: 0, size: 20 });
+      const data = isAdmin
+        ? await getAllWishlists({ page: 0, size: 200 })
+        : await getWishlist({ page: 0, size: 20 });
       setWishlist(data?.content || []);
     } catch (err) {
       setError(err.message || "Failed to load wishlist");
@@ -429,7 +537,13 @@ const WishlistPage = () => {
 
   useEffect(() => {
     loadWishlist();
-  }, []);
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin && !selectedUserId && adminWishlistUsers.length > 0) {
+      setSelectedUserId(String(adminWishlistUsers[0].id));
+    }
+  }, [adminWishlistUsers, isAdmin, selectedUserId]);
 
   const handleRemove = async (bookId) => {
     try {
@@ -451,20 +565,378 @@ const WishlistPage = () => {
     },
     {
       label: "Available Now",
-      value: wishlist.filter((e) => (e.book?.availableCopies ?? 0) > 0).length,
+      value: wishlist.filter((e) => getWishlistStatus(e) === "ACTIVE").length,
       icon: <MenuBook sx={{ fontSize: 18, color: "#065f46" }} />,
       accent: "#d1fae5",
       accentBorder: "#a7f3d0",
     },
     {
       label: "On Hold",
-      value: wishlist.filter((e) => (e.book?.availableCopies ?? 0) === 0)
-        .length,
+      value: wishlist.filter((e) => getWishlistStatus(e) === "PENDING").length,
       icon: <MenuBook sx={{ fontSize: 18, color: "#92400e" }} />,
       accent: "#fef3c7",
       accentBorder: "#fde68a",
     },
   ];
+
+  if (isAdmin) {
+    const activeUsers = adminWishlistUsers.filter(
+      (user) => user.activeCount > 0,
+    );
+    const pendingUsers = adminWishlistUsers.filter(
+      (user) => user.pendingCount > 0,
+    );
+
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: T.sand,
+          fontFamily: "'DM Sans', sans-serif",
+          padding: "32px 36px 56px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            marginBottom: 28,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 4,
+              }}
+            >
+              <Favorite sx={{ fontSize: 22, color: "#ef4444" }} />
+              <h1
+                style={{
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: 26,
+                  fontWeight: 600,
+                  color: T.text,
+                  letterSpacing: "-0.3px",
+                }}
+              >
+                Wishlist Users
+              </h1>
+            </div>
+            <p style={{ fontSize: 12, color: T.faint }}>
+              Users with wishlist items grouped by Active and Pending status.
+            </p>
+          </div>
+          <span
+            style={{
+              background: T.white,
+              border: `1px solid ${T.border}`,
+              borderRadius: 20,
+              padding: "4px 14px",
+              fontSize: 11,
+              fontWeight: 600,
+              color: T.muted,
+            }}
+          >
+            {wishlist.length} saved
+          </span>
+        </div>
+
+        {error && (
+          <div
+            style={{
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: T.radiusSm,
+              padding: "10px 16px",
+              fontSize: 12,
+              color: "#dc2626",
+              marginBottom: 20,
+              fontWeight: 500,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
+          <div
+            style={{
+              background: T.white,
+              border: `1px solid ${T.border}`,
+              borderRadius: T.radius,
+              padding: "18px 20px",
+            }}
+          >
+            <p
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                color: T.faint,
+                marginBottom: 6,
+              }}
+            >
+              Wishlist users
+            </p>
+            <p
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontSize: 34,
+                fontWeight: 600,
+                color: T.text,
+                lineHeight: 1,
+              }}
+            >
+              {adminWishlistUsers.length}
+            </p>
+          </div>
+          <div
+            style={{
+              background: T.white,
+              border: `1px solid ${T.border}`,
+              borderRadius: T.radius,
+              padding: "18px 20px",
+            }}
+          >
+            <p
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                color: T.faint,
+                marginBottom: 6,
+              }}
+            >
+              Active users
+            </p>
+            <p
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontSize: 34,
+                fontWeight: 600,
+                color: T.text,
+                lineHeight: 1,
+              }}
+            >
+              {activeUsers.length}
+            </p>
+          </div>
+          <div
+            style={{
+              background: T.white,
+              border: `1px solid ${T.border}`,
+              borderRadius: T.radius,
+              padding: "18px 20px",
+            }}
+          >
+            <p
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                color: T.faint,
+                marginBottom: 6,
+              }}
+            >
+              Pending users
+            </p>
+            <p
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontSize: 34,
+                fontWeight: 600,
+                color: T.text,
+                lineHeight: 1,
+              }}
+            >
+              {pendingUsers.length}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div
+              style={{
+                background: T.white,
+                border: `1px solid ${T.border}`,
+                borderRadius: T.radius,
+                padding: 18,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  marginBottom: 14,
+                }}
+              >
+                <GroupPill status="ACTIVE">
+                  Active {activeUsers.length}
+                </GroupPill>
+                <GroupPill status="PENDING">
+                  Pending {pendingUsers.length}
+                </GroupPill>
+              </div>
+              {adminWishlistUsers.length > 0 ? (
+                <div style={{ display: "grid", gap: 10 }}>
+                  {adminWishlistUsers.map((user, index) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => setSelectedUserId(String(user.id))}
+                      style={{
+                        textAlign: "left",
+                        border: `1px solid ${String(selectedUserId) === String(user.id) ? "#cbd5e1" : T.border}`,
+                        borderRadius: T.radiusSm,
+                        background:
+                          String(selectedUserId) === String(user.id)
+                            ? "#fafaf9"
+                            : T.white,
+                        padding: "14px 16px",
+                        display: "grid",
+                        gap: 8,
+                        animation: `wlFadeUp 0.3s ease ${Math.min(index * 0.04, 0.3)}s both`,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 12,
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 700, color: T.text }}>
+                            {user.fullName}
+                          </div>
+                          <div style={{ fontSize: 12, color: T.faint }}>
+                            {user.email}
+                          </div>
+                        </div>
+                        <PeopleAlt sx={{ fontSize: 18, color: T.faint }} />
+                      </div>
+                      <div
+                        style={{ display: "flex", flexWrap: "wrap", gap: 8 }}
+                      >
+                        <GroupPill status="ACTIVE">
+                          Active {user.activeCount}
+                        </GroupPill>
+                        <GroupPill status="PENDING">
+                          Pending {user.pendingCount}
+                        </GroupPill>
+                        <GroupPill status="ACTIVE">
+                          Total {user.totalCount}
+                        </GroupPill>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: T.faint }}>
+                  No wishlist entries found.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: T.white,
+              border: `1px solid ${T.border}`,
+              borderRadius: T.radius,
+              padding: 18,
+            }}
+          >
+            {selectedAdminUser ? (
+              <div style={{ display: "grid", gap: 12 }}>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: T.faint,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                    }}
+                  >
+                    Selected user
+                  </div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: T.text }}>
+                    {selectedAdminUser.fullName}
+                  </div>
+                  <div style={{ fontSize: 12, color: T.faint }}>
+                    {selectedAdminUser.email}
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  <GroupPill status="ACTIVE">
+                    Active {selectedAdminUser.activeCount}
+                  </GroupPill>
+                  <GroupPill status="PENDING">
+                    Pending {selectedAdminUser.pendingCount}
+                  </GroupPill>
+                  <GroupPill status="ACTIVE">
+                    Total {selectedAdminUser.totalCount}
+                  </GroupPill>
+                </div>
+                <div style={{ display: "grid", gap: 10 }}>
+                  {selectedAdminUser.entries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      style={{
+                        border: `1px solid ${T.border}`,
+                        borderRadius: T.radiusSm,
+                        padding: 12,
+                        display: "grid",
+                        gap: 6,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 12,
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, color: T.text }}>
+                          {entry.book?.title || "Untitled book"}
+                        </div>
+                        <GroupPill status={getWishlistStatus(entry)}>
+                          {getWishlistStatus(entry)}
+                        </GroupPill>
+                      </div>
+                      <div style={{ fontSize: 12, color: T.faint }}>
+                        {entry.book?.author || "Unknown author"}
+                      </div>
+                      <div style={{ fontSize: 11, color: T.muted }}>
+                        Added{" "}
+                        {entry.addedAt ? formatDateTime(entry.addedAt) : "—"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{ color: T.faint, fontSize: 12 }}>
+                Select a user to inspect their wishlist items.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -1,6 +1,5 @@
 package com.example.demo.configrations;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -23,15 +22,22 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
-                .sessionManagement(managment->managment.sessionCreationPolicy(
-                        SessionCreationPolicy.STATELESS
-                ))
-                .authorizeHttpRequests(Authorrize-> Authorrize
-                    .requestMatchers("/auth/**").permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/books/**").permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/books/search").permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/catalog/**").permitAll()
+                .sessionManagement(managment -> managment.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/books/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/books/search").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/books/bulk").hasRole("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/books/**").hasRole("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/books/**").hasRole("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users/list").hasRole("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/catalog/**").permitAll()
+                        .requestMatchers("/api/fines/waive").hasRole("ADMIN")
+                        .requestMatchers("/api/fines").hasRole("ADMIN")
+                        .requestMatchers("/api/wishlist/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/book-loans/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/subscriptions/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/subscription-plans/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").authenticated()
@@ -39,17 +45,14 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(new JwtValidator(), BasicAuthenticationFilter.class)
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors->cors.configurationSource(corsConfigrationSource()))
+                .cors(cors -> cors.configurationSource(corsConfigrationSource()))
                 .build();
     }
 
     private CorsConfigurationSource corsConfigrationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
         cfg.setAllowCredentials(true);
-        cfg.setAllowedOriginPatterns(Arrays.asList(
-            "http://localhost:*",
-            "http://127.0.0.1:*"
-        ));
+        cfg.setAllowedOriginPatterns(Arrays.asList("http://localhost:*", "http://127.0.0.1:*"));
         cfg.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(Collections.singletonList("*"));
         cfg.setExposedHeaders(Collections.singletonList("Authorization"));
@@ -61,7 +64,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder(){
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 }

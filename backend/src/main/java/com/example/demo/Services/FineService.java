@@ -18,6 +18,8 @@ public interface FineService {
 
     FineDTO waiveFine(WaiveFineRequest waiveFineRequest) throws Exception;
 
+    void deleteFine(Long fineId) throws Exception;
+
     List<FineDTO> getMyFines(FineStatus status, FineType type) throws Exception;
 
     pageResponse<FineDTO> getAllFines(

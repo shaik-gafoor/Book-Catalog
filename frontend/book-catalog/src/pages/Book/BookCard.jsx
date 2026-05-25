@@ -9,6 +9,7 @@ import {
   Bookmark,
   AutoStories,
   Edit,
+  Delete,
 } from "@mui/icons-material";
 import { updateBook } from "../../api/libraryApi";
 import UpgradeAlert from "../../components/UpgradeAlert";
@@ -152,6 +153,7 @@ const BookCard = ({
   onReserve,
   onWishlist,
   onCheckout,
+  onDelete,
   onBookUpdated,
   animIndex = 0,
   activeSub,
@@ -280,6 +282,18 @@ const BookCard = ({
       return;
     }
     onCheckout?.(book);
+  };
+
+  const handleDeleteAction = (e) => {
+    e.stopPropagation();
+    if (!onDelete) return;
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(`Delete ${book.title || "this book"}?`)
+    ) {
+      return;
+    }
+    onDelete(book);
   };
 
   /* ── stat box used in dialog ── */
@@ -530,6 +544,16 @@ const BookCard = ({
                 onClick={handleCheckoutAction}
               >
                 Checkout
+              </Btn>
+            )}
+            {onDelete && (
+              <Btn
+                variant="ghost"
+                onClick={handleDeleteAction}
+                style={{ color: "#b91c1c", borderColor: "#fecaca" }}
+              >
+                <Delete sx={{ fontSize: 14 }} />
+                Delete
               </Btn>
             )}
           </div>
@@ -794,6 +818,12 @@ const BookCard = ({
                     >
                       <AutoStories sx={{ fontSize: 14 }} />
                       Checkout
+                    </Btn>
+                  )}
+                  {onDelete && (
+                    <Btn variant="ghost" onClick={handleDeleteAction}>
+                      <Delete sx={{ fontSize: 14 }} />
+                      Delete
                     </Btn>
                   )}
                 </div>

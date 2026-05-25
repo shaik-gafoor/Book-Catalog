@@ -12,13 +12,20 @@ import {
   Typography,
 } from "@mui/material";
 import { ReceiptLong, Paid, Gavel } from "@mui/icons-material";
-import { getMyFines, payFine, waiveFine } from "../../api/libraryApi";
+import {
+  getAuthUser,
+  getMyFines,
+  payFine,
+  waiveFine,
+} from "../../api/libraryApi";
 import { formatDateTime, formatCurrency } from "../../utils/format";
 
 const statusOptions = ["", "PENDING", "PARTIALLY_PAID", "PAID", "WAIVED"];
 const typeOptions = ["", "OVERDUE", "DAMAGE", "LOSS", "PROCESSING"];
 
 const MyFines = () => {
+  const currentUser = getAuthUser();
+  const isAdmin = currentUser?.role === "ROLE_ADMIN";
   const [status, setStatus] = useState("");
   const [type, setType] = useState("");
   const [transactionId, setTransactionId] = useState("");
@@ -239,12 +246,14 @@ const MyFines = () => {
                         <Paid sx={{ fontSize: 14 }} /> Pay
                       </button>
                     )}
-                    <button
-                      onClick={() => handleWaive(fine)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-900 hover:text-white hover:border-gray-900"
-                    >
-                      <Gavel sx={{ fontSize: 14 }} /> Waive
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleWaive(fine)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-900 hover:text-white hover:border-gray-900"
+                      >
+                        <Gavel sx={{ fontSize: 14 }} /> Waive
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
