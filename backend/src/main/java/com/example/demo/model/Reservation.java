@@ -43,6 +43,9 @@ public class Reservation {
     @Column(name = "queue_position")
     private Integer queuePosition;
 
+    @Column(nullable = false)
+    private Boolean priority = false;
+
     @Column(name = "notification_sent", nullable = false)
     private Boolean notificationSent = false;
 

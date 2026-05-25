@@ -21,7 +21,11 @@ public class SubscriptionPlanMapper {
         dto.setPrice(plan.getPrice());
         dto.setCurrency(plan.getCurrency());
         dto.setMaxBooksAllowed(plan.getMaxBooksAllowed());
+        dto.setMaxBooksPerMonth(plan.getMaxBooksPerMonth());
+        dto.setMaxConcurrentCheckouts(plan.getMaxConcurrentCheckouts());
         dto.setMaxDaysPerBook(plan.getMaxDaysPerBook());
+        dto.setMaxRenewalsPerBook(plan.getMaxRenewalsPerBook());
+        dto.setPriorityReservation(plan.getPriorityReservation());
         dto.setDisplayOrder(plan.getDisplayOrder());
         dto.setIsActive(plan.getIsActive());
         dto.setIsFeatured(plan.getIsFeatured());
@@ -46,9 +50,13 @@ public class SubscriptionPlanMapper {
         plan.setDescription(dto.getDescription());
         plan.setDurationDays(dto.getDurationDays());
         plan.setPrice(dto.getPrice());
-//        plan.setCurrency(dto.getCurrency() != null ? dto.getCurrency() : "INR");
-        plan.setMaxBooksAllowed(dto.getMaxBooksAllowed());
+    plan.setCurrency(dto.getCurrency() != null ? dto.getCurrency() : "INR");
+    plan.setMaxBooksAllowed(dto.getMaxBooksAllowed() != null ? dto.getMaxBooksAllowed() : dto.getMaxConcurrentCheckouts());
+    plan.setMaxBooksPerMonth(dto.getMaxBooksPerMonth());
+    plan.setMaxConcurrentCheckouts(dto.getMaxConcurrentCheckouts());
         plan.setMaxDaysPerBook(dto.getMaxDaysPerBook());
+    plan.setMaxRenewalsPerBook(dto.getMaxRenewalsPerBook());
+    plan.setPriorityReservation(dto.getPriorityReservation() != null ? dto.getPriorityReservation() : false);
         plan.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : 0);
         plan.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : true);
         plan.setIsFeatured(dto.getIsFeatured() != null ? dto.getIsFeatured() : false);
@@ -91,8 +99,24 @@ public class SubscriptionPlanMapper {
             plan.setMaxBooksAllowed(dto.getMaxBooksAllowed());
         }
 
+        if(dto.getMaxBooksPerMonth() != null){
+            plan.setMaxBooksPerMonth(dto.getMaxBooksPerMonth());
+        }
+
+        if(dto.getMaxConcurrentCheckouts() != null){
+            plan.setMaxConcurrentCheckouts(dto.getMaxConcurrentCheckouts());
+        }
+
         if(dto.getMaxDaysPerBook() != null){
             plan.setMaxDaysPerBook(dto.getMaxDaysPerBook());
+        }
+
+        if(dto.getMaxRenewalsPerBook() != null){
+            plan.setMaxRenewalsPerBook(dto.getMaxRenewalsPerBook());
+        }
+
+        if(dto.getPriorityReservation() != null){
+            plan.setPriorityReservation(dto.getPriorityReservation());
         }
 
         if(dto.getDisplayOrder() != null){

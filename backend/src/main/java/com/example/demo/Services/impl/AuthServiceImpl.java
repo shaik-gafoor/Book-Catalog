@@ -6,11 +6,15 @@ import com.example.demo.configrations.JwtProvider;
 import com.example.demo.domain.UserRole;
 import com.example.demo.exception.UserException;
 import com.example.demo.mapper.UserMapper;
+import com.example.demo.model.Subscription;
+import com.example.demo.model.SubscriptionPlan;
 import com.example.demo.model.PasswordResetToken;
 import com.example.demo.model.User;
 import com.example.demo.payload.dto.UserDTO;
 import com.example.demo.payload.response.AuthResponse;
 import com.example.demo.repository.PasswordResetTokenRepository;
+import com.example.demo.repository.SubscriptionPlanRepository;
+import com.example.demo.repository.SubscriptionRepository;
 import com.example.demo.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +29,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.beans.Transient;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -39,6 +44,8 @@ public class AuthServiceImpl implements AuthService {
     private final JwtProvider jwtProvider;
 
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final SubscriptionPlanRepository subscriptionPlanRepository;
+    private final SubscriptionRepository subscriptionRepository;
     private final CustomUserServiceImplementation customUserServiceImplementation;
     private final EmailService emailService;
 
@@ -102,6 +109,7 @@ public class AuthServiceImpl implements AuthService {
         createdUser.setRole(String.valueOf(UserRole.ROLE_USER));
 
         User savedUser = userRepository.save(createdUser);
+        createDefaultFreeSubscription(savedUser);
 
         Authentication auth = new UsernamePasswordAuthenticationToken(
             savedUser.getEmail(),
@@ -116,6 +124,24 @@ public class AuthServiceImpl implements AuthService {
         response.setMessage("register success");
         response.setUser(UserMapper.toDTO(savedUser));
         return response;
+    }
+
+    private void createDefaultFreeSubscription(User user) throws UserException {
+        SubscriptionPlan freePlan = subscriptionPlanRepository.findByPlanCode("FREE");
+        if (freePlan == null) {
+            throw new UserException("default subscription plan not found");
+        }
+
+        Subscription subscription = Subscription.builder()
+                .user(user)
+                .plan(freePlan)
+                .build();
+        subscription.initializeFromPlan();
+        subscription.setIsActive(true);
+        subscription.setBooksCheckedOutThisMonth(0);
+        subscription.setCurrentConcurrentCheckouts(0);
+        subscription.setMonthlyQuotaResetDate(LocalDate.now().plusDays(30));
+        subscriptionRepository.save(subscription);
     }
 
 

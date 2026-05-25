@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   MenuBook,
   PersonOutlined,
@@ -10,6 +11,7 @@ import {
   KeyboardReturn,
 } from "@mui/icons-material";
 import { formatDate } from "../../utils/format";
+import UpgradeAlert from "../../components/UpgradeAlert";
 
 const T = {
   sand: "#f7f6f3",
@@ -82,6 +84,11 @@ const STATUS_CFG = {
     text: "#64748b",
     dot: "#94a3b8",
   },
+};
+
+const FREE_SUBSCRIPTION = {
+  planCode: "FREE",
+  maxRenewalsPerBook: 0,
 };
 
 /* ── small action button ── */
@@ -164,10 +171,15 @@ const InfoBox = ({ label, value, sub }) => (
   </div>
 );
 
-const LoanCard = ({ loan, onRenew, onCheckin, animIndex = 0 }) => {
+const LoanCard = ({ loan, onRenew, onCheckin, activeSub, animIndex = 0 }) => {
+  const navigate = useNavigate();
   const [hov, setHov] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const cfg = STATUS_CFG[loan.status] || STATUS_CFG.CHECKED_OUT;
   const coverImage = loan.bookCoverImage || loan.coverImageUrl;
+  const subscription = activeSub || FREE_SUBSCRIPTION;
+  const isFree =
+    !activeSub || String(subscription.planCode || "FREE") === "FREE";
   const canAct =
     (loan.status === "CHECKED_OUT" ||
       loan.status === "ACTIVE" ||
@@ -175,6 +187,7 @@ const LoanCard = ({ loan, onRenew, onCheckin, animIndex = 0 }) => {
       loan.status === "OVERDUE") &&
     !loan.returnDate;
   const canRenew = canAct && loan.renewalCount < loan.maxRenewals;
+  const renewBlockedByPlan = !isFree && !canRenew;
 
   /* Due countdown label */
   const dueBadge = loan.isOverdue
@@ -200,6 +213,20 @@ const LoanCard = ({ loan, onRenew, onCheckin, animIndex = 0 }) => {
           }
         : null;
 
+  const handleUpgrade = () => {
+    navigate("/subscriptions");
+  };
+
+  const handleRenew = () => {
+    if (isFree) {
+      setUpgradeOpen(true);
+      return;
+    }
+    if (canRenew) {
+      onRenew?.(loan);
+    }
+  };
+
   return (
     <div
       onMouseEnter={() => setHov(true)}
@@ -214,6 +241,7 @@ const LoanCard = ({ loan, onRenew, onCheckin, animIndex = 0 }) => {
           : "0 1px 4px rgba(0,0,0,0.04)",
         transform: hov ? "translateY(-2px)" : "translateY(0)",
         transition: "all 0.22s ease",
+        position: "relative",
         animation: `lcFadeUp 0.38s ease ${Math.min(animIndex * 0.06, 0.5)}s both`,
       }}
     >
@@ -473,8 +501,12 @@ const LoanCard = ({ loan, onRenew, onCheckin, animIndex = 0 }) => {
               justifyContent: "flex-end",
             }}
           >
-            {canRenew && onRenew && (
-              <Btn variant="outline" onClick={() => onRenew(loan)}>
+            {onRenew && (
+              <Btn
+                variant="outline"
+                onClick={handleRenew}
+                disabled={renewBlockedByPlan}
+              >
                 <Refresh sx={{ fontSize: 14 }} />
                 Renew
               </Btn>
@@ -488,6 +520,15 @@ const LoanCard = ({ loan, onRenew, onCheckin, animIndex = 0 }) => {
           </div>
         </div>
       </div>
+
+      {upgradeOpen && (
+        <UpgradeAlert
+          title="Renewal not available"
+          message="Loan renewal requires a Basic or Premium plan. Upgrade to extend your borrowing time."
+          onClose={() => setUpgradeOpen(false)}
+          onUpgrade={handleUpgrade}
+        />
+      )}
     </div>
   );
 };

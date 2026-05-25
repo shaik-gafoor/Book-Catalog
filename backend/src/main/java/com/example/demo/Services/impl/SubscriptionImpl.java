@@ -54,11 +54,48 @@ public class SubscriptionImpl implements SubscriptionService {
                 .findById(subscriptionDTO.getPlanId())
                 .orElseThrow(() -> new Exception("Plan not found!"));
 
+        Subscription currentSubscription = subscriptionRepository
+            .findActiveSubscriptionByUserId(user.getId(), LocalDate.now())
+            .orElse(null);
+
+        if (currentSubscription != null
+            && currentSubscription.getPlan() != null
+            && plan.getPlanCode().equalsIgnoreCase(currentSubscription.getPlan().getPlanCode())) {
+            PaymentInitiateRequest paymentInitiateRequest = PaymentInitiateRequest
+                .builder()
+                .userId(user.getId())
+                .subscriptionId(currentSubscription.getId())
+                .paymentType(PaymentType.MEMBERSHIP)
+                .gateway(PaymentGateway.RAZORPAY)
+                .amount(currentSubscription.getPrice())
+                .description("Library Subscription - " + plan.getName())
+                .build();
+            return paymentService.initiatePayment(paymentInitiateRequest);
+        }
+
+        if (currentSubscription != null) {
+            currentSubscription.setIsActive(false);
+            currentSubscription.setCancelledAt(LocalDateTime.now());
+            currentSubscription.setCancellationReason("Upgraded to " + plan.getName());
+            subscriptionRepository.save(currentSubscription);
+        }
+
 // Optional<Sub>
 
         Subscription subscription = subscriptionMapper.toEntity(subscriptionDTO,plan,user);
         subscription.initializeFromPlan();
-        subscription.setIsActive(false);
+        subscription.setIsActive(true);
+        subscription.setBooksCheckedOutThisMonth(
+            currentSubscription != null && currentSubscription.getBooksCheckedOutThisMonth() != null
+                ? currentSubscription.getBooksCheckedOutThisMonth()
+                : 0
+        );
+        subscription.setCurrentConcurrentCheckouts(
+            currentSubscription != null && currentSubscription.getCurrentConcurrentCheckouts() != null
+                ? currentSubscription.getCurrentConcurrentCheckouts()
+                : 0
+        );
+        subscription.setMonthlyQuotaResetDate(LocalDate.now().plusDays(30));
         Subscription savedSubscription = subscriptionRepository.save(subscription);
 // create payment (todo)
 
@@ -78,14 +115,44 @@ public class SubscriptionImpl implements SubscriptionService {
     @Override
     public SubscriptionDTO getUsersActiveSubscription(Long userId) throws Exception {
         try {
-            User user = userService.getCurrentUser();
+            Long targetUserId = userId;
+            if (targetUserId == null) {
+                User currentUser = userService.getCurrentUser();
+                targetUserId = currentUser.getId();
+            }
+            final Long resolvedUserId = targetUserId;
             Subscription subscription = subscriptionRepository
-                    .findActiveSubscriptionByUserId(user.getId(), LocalDate.now())
-                    .orElse(null);
+                    .findActiveSubscriptionByUserId(resolvedUserId, LocalDate.now())
+                    .orElseGet(() -> createFallbackFreeSubscription(resolvedUserId));
             return subscription == null ? null : subscriptionMapper.toDTO(subscription);
         } catch (Exception ignored) {
             return null;
         }
+    }
+
+    private Subscription createFallbackFreeSubscription(Long userId) {
+        User user;
+        try {
+            user = userService.findById(userId);
+        } catch (Exception e) {
+            return null;
+        }
+
+        SubscriptionPlan freePlan = subscriptionPlanRepository.findByPlanCode("FREE");
+        if (freePlan == null) {
+            return null;
+        }
+
+        Subscription subscription = Subscription.builder()
+                .user(user)
+                .plan(freePlan)
+                .build();
+        subscription.initializeFromPlan();
+        subscription.setIsActive(true);
+        subscription.setBooksCheckedOutThisMonth(0);
+        subscription.setCurrentConcurrentCheckouts(0);
+        subscription.setMonthlyQuotaResetDate(LocalDate.now().plusDays(30));
+        return subscriptionRepository.save(subscription);
     }
 
     @Override

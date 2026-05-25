@@ -51,11 +51,19 @@ public class SubscriptionMapper {
         dto.setEndDate(subscription.getEndDate());
         dto.setIsActive(subscription.getIsActive());
         dto.setMaxBooksAllowed(subscription.getMaxBooksAllowed());
+        dto.setMaxBooksPerMonth(subscription.getMaxBooksPerMonth());
+        dto.setMaxConcurrentCheckouts(subscription.getMaxConcurrentCheckouts());
         dto.setMaxDaysPerBook(subscription.getMaxDaysPerBook());
+        dto.setMaxRenewalsPerBook(subscription.getMaxRenewalsPerBook());
+        dto.setPriorityReservation(subscription.getPriorityReservation());
         dto.setAutoRenew(subscription.getAutoRenew());
         dto.setCancelledAt(subscription.getCancelledAt());
         dto.setCancellationReason(subscription.getCancellationReason());
         dto.setNotes(subscription.getNotes());
+        dto.setBooksCheckedOutThisMonth(subscription.getBooksCheckedOutThisMonth());
+        dto.setBooksCheckedOut(subscription.getBooksCheckedOutThisMonth());
+        dto.setCurrentConcurrentCheckouts(subscription.getCurrentConcurrentCheckouts());
+        dto.setMonthlyQuotaResetDate(subscription.getMonthlyQuotaResetDate());
         dto.setCreatedAt(subscription.getCreatedAt());
         dto.setUpdatedAt(subscription.getUpdatedAt());
 

@@ -42,6 +42,7 @@ public class ReservationMapper {
         dto.setFulfilledAt(reservation.getFulfilledAt());
         dto.setCancelledAt(reservation.getCancelledAt());
         dto.setQueuePosition(reservation.getQueuePosition());
+        dto.setPriority(reservation.getPriority());
         dto.setNotificationSent(reservation.getNotificationSent());
         dto.setNotes(reservation.getNotes());
         dto.setCreatedAt(reservation.getCreatedAt());

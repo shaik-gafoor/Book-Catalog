@@ -2,10 +2,12 @@ package com.example.demo.Services.impl;
 
 import com.example.demo.Services.UserService;
 import com.example.demo.Services.WishlistService;
+import com.example.demo.Services.SubscriptionService;
 import com.example.demo.mapper.WishlistMapper;
 import com.example.demo.model.Book;
 import com.example.demo.model.User;
 import com.example.demo.model.Wishlist;
+import com.example.demo.payload.dto.SubscriptionDTO;
 import com.example.demo.payload.dto.WishlistDTO;
 import com.example.demo.payload.response.pageResponse;
 import com.example.demo.repository.BookRepository;
@@ -28,11 +30,18 @@ public class WishlistServiceImpl implements WishlistService {
     private final BookRepository bookRepository;
     private final WishlistRepository wishlistRepository;
     private final WishlistMapper wishlistMapper;
+    private final SubscriptionService subscriptionService;
 
 
     @Override
     public WishlistDTO addToWishlist(Long bookId, String notes) throws Exception {
         User user = userService.getCurrentUser();
+        SubscriptionDTO subscription = subscriptionService.getUsersActiveSubscription(user.getId());
+        String planCode = subscription != null && subscription.getPlanCode() != null ? subscription.getPlanCode() : "FREE";
+
+        if ("FREE".equalsIgnoreCase(planCode)) {
+            throw new Exception("Wishlist is not available on the Free plan. Upgrade to Basic or Premium to save books.");
+        }
 
 // 1. validate book exist
         Book book = bookRepository.findById(bookId)
