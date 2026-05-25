@@ -1,9 +1,12 @@
 package com.example.demo.Services.impl;
 
 import com.example.demo.Services.BookService;
+import com.example.demo.Services.UserService;
+import com.example.demo.domain.UserRole;
 import com.example.demo.exception.BookException;
 import com.example.demo.mapper.BookMapper;
 import com.example.demo.model.Book;
+import com.example.demo.model.User;
 import com.example.demo.payload.dto.BookDTO;
 import com.example.demo.payload.request.BookSearchRequest;
 import com.example.demo.payload.response.pageResponse;
@@ -24,6 +27,7 @@ public class BookServiceImpl implements BookService {
 
     private final BookRepository bookRepository;
     private final BookMapper bookMapper;
+    private final UserService userService;
 
 
 
@@ -82,6 +86,7 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public void deleteBook(Long bookId) throws BookException {
+        ensureAdmin();
         Book existingBook = bookRepository.findById(bookId)
                 .orElseThrow(() -> new BookException("Book Not Found!"));
         existingBook.setActive(false);
@@ -91,6 +96,7 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public void hardDeleteBook(Long bookId) throws BookException {
+        ensureAdmin();
         Book existingBook = bookRepository.findById(bookId)
                 .orElseThrow(() -> new BookException("Book Not Found!"));
         bookRepository.delete(existingBook);
@@ -145,5 +151,18 @@ public class BookServiceImpl implements BookService {
                 books.isLast(),
                 books.isFirst(),
                 books.isEmpty());
+    }
+
+    private void ensureAdmin() throws BookException {
+        try {
+            User currentUser = userService.getCurrentUser();
+            if (!UserRole.ROLE_ADMIN.equals(currentUser.getRole())) {
+                throw new BookException("Only admin can delete books");
+            }
+        } catch (BookException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BookException(e.getMessage());
+        }
     }
 }

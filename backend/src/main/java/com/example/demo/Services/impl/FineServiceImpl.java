@@ -5,6 +5,7 @@ import com.example.demo.Services.PaymentService;
 import com.example.demo.Services.UserService;
 import com.example.demo.domain.FineStatus;
 import com.example.demo.domain.FineType;
+import com.example.demo.domain.UserRole;
 import com.example.demo.domain.PaymentGateway;
 import com.example.demo.domain.PaymentType;
 import com.example.demo.mapper.FineMapper;
@@ -115,6 +116,11 @@ public class FineServiceImpl implements FineService {
         Fine fine = fineRepository.findById(waiveFineRequest.getFineId())
                 .orElseThrow(() -> new Exception("Fine not found with id: " + waiveFineRequest.getFineId()));
 
+                User currentUser = userService.getCurrentUser();
+                if (!UserRole.ROLE_ADMIN.equals(currentUser.getRole())) {
+                        throw new Exception("Only admin can waive fines");
+                }
+
 // 2. Check if already waived or paid to prevent redundant operations
         if (fine.getStatus() == FineStatus.WAIVED) {
             throw new Exception("Fine has already been waived");
@@ -125,8 +131,7 @@ public class FineServiceImpl implements FineService {
         }
 
 // 3. Waive the fine using the current admin session
-        User currentAdmin = userService.getCurrentUser();
-        fine.waive(currentAdmin, waiveFineRequest.getReason());
+        fine.waive(currentUser, waiveFineRequest.getReason());
 
 // 4. Save the changes and return the mapped DTO
         Fine savedFine = fineRepository.save(fine);

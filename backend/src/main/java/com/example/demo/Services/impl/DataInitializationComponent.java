@@ -35,19 +35,20 @@ public class DataInitializationComponent implements CommandLineRunner {
     }
 
     private void initializedAdminUser(){
-        String adminEmail = "gafoor7898@gmail.com";
-        String adminPassword = "123456789";
+        String adminEmail = "admin@gmail.com";
+        String adminPassword = "Admin@7386";
 
-        if(userRepository.findByEmail(adminEmail) == null){
-            User user = User.builder()
-                    .password(passwordEncoder.encode(adminPassword))
-                    .email(adminEmail)
-                    .fullName("Shaik Gafoor")
-                    .role(String.valueOf(UserRole.ROLE_ADMIN))
-                    .build();
-
-            User admin = userRepository.save(user);
+        User admin = userRepository.findByEmailIgnoreCase(adminEmail);
+        if (admin == null) {
+            admin = new User();
         }
+
+        admin.setEmail(adminEmail);
+        admin.setPassword(passwordEncoder.encode(adminPassword));
+        admin.setFullName("Admin");
+        admin.setRole(String.valueOf(UserRole.ROLE_ADMIN));
+
+        userRepository.save(admin);
     }
 
             private void initializedSubscriptionPlans() {
