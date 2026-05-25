@@ -9,7 +9,13 @@ import {
   BookmarkBorder,
 } from "@mui/icons-material";
 import LoanCard from "./LoanCard.jsx";
-import { checkinBook, getMyBookLoans, renewBook } from "../../api/libraryApi";
+import {
+  checkinBook,
+  getActiveSubscription,
+  getAuthUser,
+  getMyBookLoans,
+  renewBook,
+} from "../../api/libraryApi";
 
 const T = {
   sand: "#f7f6f3",
@@ -91,6 +97,11 @@ const STAT_CFGS = [
     icon: <AssignmentReturn sx={{ fontSize: 20, color: "#fff" }} />,
   },
 ];
+
+const FREE_SUBSCRIPTION = {
+  planCode: "FREE",
+  maxRenewalsPerBook: 0,
+};
 
 /* Tab button */
 const TabBtn = ({ tab, active, count, onClick }) => {
@@ -180,6 +191,8 @@ const MyLoans = () => {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [gridKey, setGridKey] = useState(0);
+  const [activeSub, setActiveSub] = useState(null);
+  const subscriptionSnapshot = activeSub || FREE_SUBSCRIPTION;
 
   const load = async (tabIdx) => {
     setLoading(true);
@@ -203,6 +216,16 @@ const MyLoans = () => {
   useEffect(() => {
     load(activeTab);
   }, [activeTab]);
+
+  useEffect(() => {
+    const user = getAuthUser();
+    if (!user?.id) {
+      return;
+    }
+    getActiveSubscription(user.id)
+      .then((sub) => setActiveSub(sub || null))
+      .catch(() => setActiveSub(null));
+  }, []);
 
   const handleRenew = async (loan) => {
     try {
@@ -510,6 +533,7 @@ const MyLoans = () => {
                 animIndex={idx}
                 onRenew={handleRenew}
                 onCheckin={handleCheckin}
+                activeSub={subscriptionSnapshot}
               />
             </div>
           ))}

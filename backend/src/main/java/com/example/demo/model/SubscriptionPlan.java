@@ -1,7 +1,6 @@
 package com.example.demo.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Positive;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -36,12 +35,22 @@ public class SubscriptionPlan {
     private String currency = "INR";
 
     @Column(nullable = false)
-    @Positive(message = "Max books must be positive")
     private Integer maxBooksAllowed;
 
     @Column(nullable = false)
-    @Positive(message = "max days must be positive")
+    private Integer maxBooksPerMonth;
+
+    @Column(nullable = false)
+    private Integer maxConcurrentCheckouts;
+
+    @Column(nullable = false)
     private Integer maxDaysPerBook;
+
+    @Column(nullable = false)
+    private Integer maxRenewalsPerBook;
+
+    @Column(nullable = false)
+    private Boolean priorityReservation = false;
 
     private Integer displayOrder = 0;
 

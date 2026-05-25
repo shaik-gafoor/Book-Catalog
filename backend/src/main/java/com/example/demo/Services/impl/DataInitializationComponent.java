@@ -3,9 +3,11 @@ package com.example.demo.Services.impl;
 import com.example.demo.domain.UserRole;
 import com.example.demo.model.Book;
 import com.example.demo.model.Catalog;
+import com.example.demo.model.SubscriptionPlan;
 import com.example.demo.model.User;
 import com.example.demo.repository.BookRepository;
 import com.example.demo.repository.CatalogRepository;
+import com.example.demo.repository.SubscriptionPlanRepository;
 import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
@@ -22,11 +24,13 @@ public class DataInitializationComponent implements CommandLineRunner {
     public final UserRepository userRepository;
     public final CatalogRepository catalogRepository;
     public final BookRepository bookRepository;
+    public final SubscriptionPlanRepository subscriptionPlanRepository;
     public final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args){
         initializedAdminUser();
+        initializedSubscriptionPlans();
         initializedCatalogsAndBooks();
     }
 
@@ -45,6 +49,85 @@ public class DataInitializationComponent implements CommandLineRunner {
             User admin = userRepository.save(user);
         }
     }
+
+            private void initializedSubscriptionPlans() {
+            createPlanIfMissing(
+                "FREE",
+                "Free",
+                0L,
+                36500,
+                3,
+                1,
+                7,
+                0,
+                false,
+                "Default",
+                "Free plan for all new users"
+            );
+            createPlanIfMissing(
+                "BASIC",
+                "Basic",
+                99L,
+                30,
+                15,
+                5,
+                14,
+                1,
+                false,
+                "Most Popular",
+                "Monthly plan with reserve and wishlist access"
+            );
+            createPlanIfMissing(
+                "PREMIUM",
+                "Premium",
+                499L,
+                30,
+                -1,
+                10,
+                30,
+                3,
+                true,
+                "Best Value",
+                "Unlimited monthly borrowing with priority reservations"
+            );
+            }
+
+            private void createPlanIfMissing(
+                String code,
+                String name,
+                Long price,
+                int durationDays,
+                int maxBooksPerMonth,
+                int maxConcurrentCheckouts,
+                int maxDaysPerBook,
+                int maxRenewalsPerBook,
+                boolean priorityReservation,
+                String badgeText,
+                String description
+            ) {
+            if (subscriptionPlanRepository.findByPlanCode(code) != null) {
+                return;
+            }
+
+            SubscriptionPlan plan = SubscriptionPlan.builder()
+                .planCode(code)
+                .name(name)
+                .description(description)
+                .price(price)
+                .currency("INR")
+                .durationDays(durationDays)
+                .maxBooksAllowed(maxConcurrentCheckouts)
+                .maxBooksPerMonth(maxBooksPerMonth)
+                .maxConcurrentCheckouts(maxConcurrentCheckouts)
+                .maxDaysPerBook(maxDaysPerBook)
+                .maxRenewalsPerBook(maxRenewalsPerBook)
+                .priorityReservation(priorityReservation)
+                .badgeText(badgeText)
+                .isActive(true)
+                .displayOrder("FREE".equals(code) ? 1 : "BASIC".equals(code) ? 2 : 3)
+                .build();
+            subscriptionPlanRepository.save(plan);
+            }
 
             private void initializedCatalogsAndBooks() {
             Catalog technology = createCatalogIfMissing("TECH", "Technology", 1);

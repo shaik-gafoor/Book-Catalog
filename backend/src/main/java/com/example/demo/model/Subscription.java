@@ -38,7 +38,28 @@ public class Subscription {
     private Integer maxBooksAllowed;
 
     @Column(nullable = false)
+    private Integer maxBooksPerMonth;
+
+    @Column(nullable = false)
+    private Integer maxConcurrentCheckouts;
+
+    @Column(nullable = false)
     private Integer maxDaysPerBook;
+
+    @Column(nullable = false)
+    private Integer maxRenewalsPerBook;
+
+    @Column(nullable = false)
+    private Boolean priorityReservation = false;
+
+    @Column(nullable = false)
+    private Integer booksCheckedOutThisMonth = 0;
+
+    @Column(nullable = false)
+    private Integer currentConcurrentCheckouts = 0;
+
+    @Column(nullable = false)
+    private LocalDate monthlyQuotaResetDate;
 
     @Column(nullable = false)
     private LocalDate startDate;
@@ -96,7 +117,11 @@ public class Subscription {
             this.planCode = plan.getPlanCode();
             this.price = plan.getPrice();
             this.maxBooksAllowed = plan.getMaxBooksAllowed();
+            this.maxBooksPerMonth = plan.getMaxBooksPerMonth();
+            this.maxConcurrentCheckouts = plan.getMaxConcurrentCheckouts();
             this.maxDaysPerBook = plan.getMaxDaysPerBook();
+            this.maxRenewalsPerBook = plan.getMaxRenewalsPerBook();
+            this.priorityReservation = plan.getPriorityReservation();
             if (startDate == null) {
                 this.startDate = LocalDate.now();
             }

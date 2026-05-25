@@ -12,8 +12,10 @@ import {
   addToWishlist,
   checkoutBook,
   createReservation,
+  getActiveSubscription,
   getBooks,
   getCatalogs,
+  getAuthUser,
 } from "../../api/libraryApi";
 
 const T = {
@@ -92,6 +94,17 @@ const FilterCard = ({ icon, title, children }) => (
   </div>
 );
 
+const FREE_SUBSCRIPTION = {
+  planCode: "FREE",
+  maxBooksPerMonth: 3,
+  maxConcurrentCheckouts: 1,
+  maxDaysPerBook: 7,
+  maxRenewalsPerBook: 0,
+  booksCheckedOutThisMonth: 0,
+  currentConcurrentCheckouts: 0,
+  monthlyQuotaResetDate: null,
+};
+
 const BookPage = () => {
   const location = useLocation();
   const [catalogs, setCatalogs] = useState([]);
@@ -105,10 +118,22 @@ const BookPage = () => {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+  const [activeSub, setActiveSub] = useState(null);
+  const subscriptionSnapshot = activeSub || FREE_SUBSCRIPTION;
 
   useEffect(() => {
     if (location.state?.message) setMessage(location.state.message);
   }, [location.state]);
+
+  useEffect(() => {
+    const user = getAuthUser();
+    if (!user?.id) {
+      return;
+    }
+    getActiveSubscription(user.id)
+      .then((sub) => setActiveSub(sub || null))
+      .catch(() => setActiveSub(null));
+  }, []);
 
   useEffect(() => {
     getCatalogs()
@@ -465,6 +490,7 @@ const BookPage = () => {
                   onReserve={handleReserve}
                   onCheckout={handleCheckout}
                   onBookUpdated={handleBookUpdated}
+                  activeSub={subscriptionSnapshot}
                 />
               ))}
             </div>

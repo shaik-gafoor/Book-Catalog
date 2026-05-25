@@ -33,6 +33,7 @@ public class ReservationDTO {
     private LocalDateTime fulfilledAt;
     private LocalDateTime cancelledAt;
     private Integer queuePosition;
+    private Boolean priority;
     private Boolean notificationSent;
     private String notes;
 

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, TextField } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import {
   MenuBook as BookIcon,
   PersonOutlined as PersonIcon,
@@ -10,6 +11,7 @@ import {
   Edit,
 } from "@mui/icons-material";
 import { updateBook } from "../../api/libraryApi";
+import UpgradeAlert from "../../components/UpgradeAlert";
 
 /* ── shared tokens ── */
 const T = {
@@ -51,6 +53,17 @@ const buildEditState = (book) => ({
   price: book.price ?? "",
   coverImagesUrl: book.coverImagesUrl || book.coverImageUrl || "",
 });
+
+const FREE_SUBSCRIPTION = {
+  planCode: "FREE",
+  maxBooksPerMonth: 3,
+  maxConcurrentCheckouts: 1,
+  maxDaysPerBook: 7,
+  maxRenewalsPerBook: 0,
+  booksCheckedOutThisMonth: 0,
+  currentConcurrentCheckouts: 0,
+  monthlyQuotaResetDate: null,
+};
 
 /* ── status badge ── */
 const AvailBadge = ({ available }) => (
@@ -141,18 +154,42 @@ const BookCard = ({
   onCheckout,
   onBookUpdated,
   animIndex = 0,
+  activeSub,
 }) => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState(buildEditState(book));
   const [wishlisted, setWishlisted] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [upgradeAlertOpen, setUpgradeAlertOpen] = useState(false);
 
   const isAvailable = (book.availableCopies ?? 0) > 0;
+  const subscription = activeSub || FREE_SUBSCRIPTION;
+  const isFree =
+    !activeSub || String(subscription.planCode || "FREE") === "FREE";
+  const atConcurrentLimit =
+    (subscription.currentConcurrentCheckouts ?? 0) >=
+    (subscription.maxConcurrentCheckouts ?? 1);
+  const atMonthlyLimit =
+    (subscription.maxBooksPerMonth ?? 3) !== -1 &&
+    (subscription.booksCheckedOutThisMonth ?? 0) >=
+      (subscription.maxBooksPerMonth ?? 3);
+  const canCheckout = !atConcurrentLimit && !atMonthlyLimit;
   const coverUrl = book.coverImagesUrl || book.coverImageUrl;
   const catalogName =
     book.catalogName || book.genreName || book.catalogCode || "General";
+
+  const checkoutWarning = atConcurrentLimit
+    ? `You have ${subscription.currentConcurrentCheckouts ?? 0} book(s) checked out. Return a book first, or upgrade for a higher limit.`
+    : atMonthlyLimit
+      ? `Monthly limit reached (${subscription.booksCheckedOutThisMonth ?? 0}/${subscription.maxBooksPerMonth}). Resets on ${subscription.monthlyQuotaResetDate || "your reset date"}. Upgrade for more books.`
+      : "";
+
+  const goToSubscription = () => {
+    navigate("/subscriptions");
+  };
 
   const openDialog = () => {
     setEditForm(buildEditState(book));
@@ -216,6 +253,32 @@ const BookCard = ({
     onWishlist?.(book);
   };
 
+  const handleReserveAction = (e) => {
+    e.stopPropagation();
+    if (isFree) {
+      setUpgradeAlertOpen(true);
+      return;
+    }
+    onReserve?.(book);
+  };
+
+  const handleWishlistAction = (e) => {
+    e.stopPropagation();
+    if (isFree) {
+      setUpgradeAlertOpen(true);
+      return;
+    }
+    handleWishlist(e);
+  };
+
+  const handleCheckoutAction = (e) => {
+    e.stopPropagation();
+    if (!isAvailable || !canCheckout) {
+      return;
+    }
+    onCheckout?.(book);
+  };
+
   /* ── stat box used in dialog ── */
   const StatBox = ({ label, val }) => (
     <div
@@ -275,6 +338,7 @@ const BookCard = ({
           display: "flex",
           flexDirection: "column",
           height: "100%",
+          position: "relative",
           boxShadow: hovered
             ? "0 10px 36px rgba(0,0,0,0.10)"
             : "0 1px 4px rgba(0,0,0,0.04)",
@@ -348,7 +412,7 @@ const BookCard = ({
           </span>
           {/* Wishlist heart */}
           <button
-            onClick={handleWishlist}
+            onClick={handleWishlistAction}
             aria-label="Wishlist"
             style={{
               position: "absolute",
@@ -447,36 +511,48 @@ const BookCard = ({
             onClick={(e) => e.stopPropagation()}
           >
             {onWishlist && (
-              <Btn variant="ghost" onClick={handleWishlist}>
+              <Btn variant="ghost" onClick={handleWishlistAction}>
                 {wishlisted ? "Wishlisted" : "Wishlist"}
               </Btn>
             )}
             {onReserve && (
-              <Btn
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onReserve(book);
-                }}
-              >
+              <Btn variant="outline" onClick={handleReserveAction}>
                 Reserve
               </Btn>
             )}
             {onCheckout && (
               <Btn
-                variant={isAvailable ? "solid" : "ghost"}
-                disabled={!isAvailable}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isAvailable) onCheckout(book);
-                }}
+                variant={isAvailable && canCheckout ? "solid" : "ghost"}
+                disabled={!isAvailable || !canCheckout}
+                onClick={handleCheckoutAction}
               >
                 Checkout
               </Btn>
             )}
           </div>
+          {checkoutWarning && onCheckout && (
+            <p
+              style={{
+                marginTop: 10,
+                fontSize: 11.5,
+                lineHeight: 1.5,
+                color: "#b45309",
+              }}
+            >
+              {checkoutWarning}
+            </p>
+          )}
         </div>
       </div>
+
+      {upgradeAlertOpen && (
+        <UpgradeAlert
+          title="Reservations and wishlist require an upgrade"
+          message="A Basic or Premium plan unlocks reservations, wishlist saves, and loan renewals. Upgrade to keep these actions available."
+          onClose={() => setUpgradeAlertOpen(false)}
+          onUpgrade={goToSubscription}
+        />
+      )}
 
       {/* ════════════ DIALOG ════════════ */}
       <Dialog
@@ -698,22 +774,20 @@ const BookCard = ({
                 </Btn>
                 <div style={{ display: "flex", gap: 8 }}>
                   {onWishlist && (
-                    <Btn variant="outline" onClick={() => onWishlist(book)}>
+                    <Btn variant="outline" onClick={handleWishlistAction}>
                       Wishlist
                     </Btn>
                   )}
                   {onReserve && (
-                    <Btn variant="outline" onClick={() => onReserve(book)}>
+                    <Btn variant="outline" onClick={handleReserveAction}>
                       Reserve
                     </Btn>
                   )}
                   {onCheckout && (
                     <Btn
-                      variant={isAvailable ? "solid" : "ghost"}
-                      disabled={!isAvailable}
-                      onClick={() => {
-                        if (isAvailable) onCheckout(book);
-                      }}
+                      variant={isAvailable && canCheckout ? "solid" : "ghost"}
+                      disabled={!isAvailable || !canCheckout}
+                      onClick={handleCheckoutAction}
                     >
                       <AutoStories sx={{ fontSize: 14 }} />
                       Checkout
@@ -721,6 +795,18 @@ const BookCard = ({
                   )}
                 </div>
               </div>
+              {checkoutWarning && onCheckout && (
+                <p
+                  style={{
+                    marginTop: 10,
+                    fontSize: 11.5,
+                    lineHeight: 1.5,
+                    color: "#b45309",
+                  }}
+                >
+                  {checkoutWarning}
+                </p>
+              )}
             </>
           ) : (
             <>

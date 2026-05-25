@@ -2,6 +2,7 @@ package com.example.demo.Services.impl;
 
 import com.example.demo.Services.BookLoanService;
 import com.example.demo.Services.ReservationService;
+import com.example.demo.Services.SubscriptionService;
 import com.example.demo.Services.UserService;
 import com.example.demo.domain.BookLoanStatus;
 import com.example.demo.domain.ReservationStatus;
@@ -10,6 +11,7 @@ import com.example.demo.mapper.ReservationMapper;
 import com.example.demo.model.Book;
 import com.example.demo.model.Reservation;
 import com.example.demo.model.User;
+import com.example.demo.payload.dto.SubscriptionDTO;
 import com.example.demo.payload.dto.ReservationDTO;
 import com.example.demo.payload.request.CheckoutRequest;
 import com.example.demo.payload.request.ReservationRequest;
@@ -38,6 +40,7 @@ public class ReservationServiceImpl implements ReservationService {
     private final ReservationRepository reservationRepository;
     private final ReservationMapper reservationMapper;
     private final BookLoanService bookLoanService;
+    private final SubscriptionService subscriptionService;
 
     int MAX_RESERVATIONS = 5;
 
@@ -49,6 +52,13 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     public ReservationDTO createReservationForUser(ReservationRequest reservationRequest, Long userId) throws Exception {
+        SubscriptionDTO subscription = subscriptionService.getUsersActiveSubscription(userId);
+        String planCode = subscription != null && subscription.getPlanCode() != null ? subscription.getPlanCode() : "FREE";
+
+        if ("FREE".equalsIgnoreCase(planCode)) {
+            throw new Exception("Reservations are not available on the Free plan. Upgrade to Basic or Premium to reserve books.");
+        }
+
         boolean alreadyHasLoan = bookLoanRepository.existsByUserIdAndBookIdAndStatus(
                 userId, reservationRequest.getBookId(), BookLoanStatus.CHECKED_OUT
         );
@@ -74,6 +84,7 @@ public class ReservationServiceImpl implements ReservationService {
         if (activeReservations >= MAX_RESERVATIONS) {
             throw new Exception("you have reserved " + MAX_RESERVATIONS + " times");
         }
+        boolean priorityReservation = "PREMIUM".equalsIgnoreCase(planCode);
 // 6. create reservation
         // 6. create reservation
         Reservation reservation = new Reservation();
@@ -82,6 +93,7 @@ public class ReservationServiceImpl implements ReservationService {
         reservation.setReservedAt(LocalDateTime.now());
         reservation.setNotificationSent(false);
         reservation.setNotes(reservationRequest.getNotes());
+        reservation.setPriority(priorityReservation);
 
         boolean bookCurrentlyAvailable = book.getAvailableCopies() != null
                 && book.getAvailableCopies() > 0;
@@ -94,9 +106,9 @@ public class ReservationServiceImpl implements ReservationService {
         } else {
             reservation.setStatus(ReservationStatus.PENDING);
 
-            long pendingCount = reservationRepository.countPendingReservationsByBook(
-                    book.getId()
-            );
+            long pendingCount = priorityReservation
+                ? reservationRepository.countPendingPriorityReservationsByBook(book.getId())
+                : reservationRepository.countPendingReservationsByBook(book.getId());
 
             reservation.setQueuePosition((int) pendingCount + 1);
         }
