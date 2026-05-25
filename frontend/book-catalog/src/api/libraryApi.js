@@ -892,8 +892,10 @@ export const getActiveSubscription = (userId) =>
   request("/api/subscriptions/user/active", { query: { userId } }).catch(
     () => null,
   );
-export const getAllSubscriptions = () =>
-  request("/api/subscriptions/admin").catch(() => emptyPageResponse());
+export const getAllSubscriptions = (params) =>
+  request("/api/subscriptions/admin", { query: params }).catch(() =>
+    emptyPageResponse(),
+  );
 export const deactivateExpiredSubscriptions = () =>
   request("/api/subscriptions/admin/deactivate-expired");
 export const cancelSubscription = (subscriptionId, reason) =>
@@ -930,5 +932,9 @@ export const removeFromWishlist = (bookId) =>
   request(`/api/wishlist/remove/${bookId}`, { method: "DELETE" });
 export const getWishlist = (params) =>
   request("/api/wishlist/my-wishlist", { query: params }).catch(() =>
+    emptyPageResponse(),
+  );
+export const getAllWishlists = (params) =>
+  request("/api/wishlist/admin", { query: params }).catch(() =>
     emptyPageResponse(),
   );

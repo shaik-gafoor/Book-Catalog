@@ -38,9 +38,9 @@ public class SubscriptionController {
     }
 
     @GetMapping("/admin")
-    public ResponseEntity<?> getAllSubscriptions() {
-        int page = 0;
-        int size = 10;
+    public ResponseEntity<?> getAllSubscriptions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
         Pageable pageable = PageRequest.of(page, size);
         List<SubscriptionDTO> dtoList = subscriptionService.getAllSubscriptions(pageable);
         return ResponseEntity.ok(dtoList);

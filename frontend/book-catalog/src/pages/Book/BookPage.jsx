@@ -10,6 +10,7 @@ import { useLocation } from "react-router-dom";
 import BookCard from "./BookCard";
 import {
   addToWishlist,
+  deleteBook,
   checkoutBook,
   createReservation,
   getActiveSubscription,
@@ -119,6 +120,7 @@ const BookPage = () => {
   const [message, setMessage] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeSub, setActiveSub] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const subscriptionSnapshot = activeSub || FREE_SUBSCRIPTION;
 
   useEffect(() => {
@@ -130,6 +132,7 @@ const BookPage = () => {
     if (!user?.id) {
       return;
     }
+    setIsAdmin(String(user.role || "").toUpperCase() === "ROLE_ADMIN");
     getActiveSubscription(user.id)
       .then((sub) => setActiveSub(sub || null))
       .catch(() => setActiveSub(null));
@@ -226,6 +229,16 @@ const BookPage = () => {
     if (!u?.id) return;
     setBooks((bs) => bs.map((b) => (String(b.id) === String(u.id) ? u : b)));
     setMessage(`Updated ${u.title || "book"}`);
+  };
+
+  const handleDeleteBook = async (book) => {
+    try {
+      await deleteBook(book.id);
+      setBooks((bs) => bs.filter((b) => String(b.id) !== String(book.id)));
+      setMessage(`Deleted ${book.title || "book"}`);
+    } catch (e) {
+      setError(e.message || "Failed to delete book");
+    }
   };
 
   const selectedCatalog = catalogs.find(
@@ -489,6 +502,7 @@ const BookPage = () => {
                   onWishlist={handleWishlist}
                   onReserve={handleReserve}
                   onCheckout={handleCheckout}
+                  onDelete={isAdmin ? handleDeleteBook : undefined}
                   onBookUpdated={handleBookUpdated}
                   activeSub={subscriptionSnapshot}
                 />
