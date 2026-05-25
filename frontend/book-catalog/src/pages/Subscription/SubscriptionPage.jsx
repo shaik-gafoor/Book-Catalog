@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   CardMembership,
   CheckCircle,
   OpenInNew,
   Close,
+  PeopleAlt,
   StarOutlined,
   Diamond,
   WorkspacePremium,
@@ -11,13 +12,14 @@ import {
 } from "@mui/icons-material";
 import {
   cancelSubscription,
+  getAllSubscriptions,
   getActiveSubscription,
   getAuthUser,
   getProfile,
   getSubscriptionPlans,
   subscribe,
 } from "../../api/libraryApi";
-import { formatDateTime, formatCurrency } from "../../utils/format";
+import { formatDateTime, formatCurrency, formatDate } from "../../utils/format";
 import { STATIC_PLANS } from "./subscriptionPlans";
 
 /* ─────────────────────────────────────────────
@@ -125,6 +127,10 @@ const CURRENT_PLAN_THEMES = {
     gradient: "linear-gradient(145deg,#1e293b 0%,#0f172a 100%)",
     shadow: "0 12px 40px rgba(0,0,0,.2)",
   },
+  ADMIN: {
+    gradient: "linear-gradient(145deg,#6d28d9 0%,#312e81 100%)",
+    shadow: "0 12px 40px rgba(109,40,217,.35)",
+  },
   BASIC: {
     gradient: "linear-gradient(145deg,#1d4ed8 0%,#2563eb 100%)",
     shadow: "0 12px 40px rgba(29,78,216,.35)",
@@ -170,6 +176,60 @@ const getDaysUntilReset = (dateValue) => {
     0,
     Math.ceil((target.getTime() - today.getTime()) / 86400000),
   );
+};
+
+const latestSubscription = (items) =>
+  [...items].sort((left, right) => {
+    const leftTime = new Date(
+      left?.updatedAt || left?.createdAt || left?.startDate || 0,
+    ).getTime();
+    const rightTime = new Date(
+      right?.updatedAt || right?.createdAt || right?.startDate || 0,
+    ).getTime();
+    return rightTime - leftTime;
+  })[0];
+
+const uniqueByUserId = (items) => {
+  const map = new Map();
+  items.forEach((item) => {
+    if (item?.userId == null) return;
+    const key = String(item.userId);
+    const current = map.get(key);
+    if (!current) {
+      map.set(key, item);
+      return;
+    }
+
+    const currentTime = new Date(
+      current.updatedAt || current.createdAt || current.startDate || 0,
+    ).getTime();
+    const nextTime = new Date(
+      item.updatedAt || item.createdAt || item.startDate || 0,
+    ).getTime();
+
+    if (nextTime >= currentTime) {
+      map.set(key, item);
+    }
+  });
+
+  return Array.from(map.values());
+};
+
+const getSubscriptionTone = (subscription) => {
+  if (!subscription) return "slate";
+  if (subscription.isActive) return "green";
+  if (subscription.isExpired) return "red";
+  if (subscription.cancellationReason) return "amber";
+  return "blue";
+};
+
+const getSubscriptionLabel = (subscription) => {
+  if (!subscription) return "No subscription";
+  const plan = subscription.planName || subscription.planCode || "Subscription";
+  if (subscription.isActive) return `${plan} · Active`;
+  if (subscription.isExpired) return `${plan} · Expired`;
+  if (subscription.cancellationReason) return `${plan} · Cancelled`;
+  return plan;
 };
 
 /* ─────────────────────────────────────────────
@@ -542,9 +602,11 @@ const PlanCard = ({ plan, index, activePlanCode, notes, onSubscribe }) => {
 const SubscriptionPage = () => {
   const user = getAuthUser();
   const userId = user?.id;
+  const isAdmin = String(user?.role || "").toUpperCase() === "ROLE_ADMIN";
 
   const [plans, setPlans] = useState([]);
   const [activeSub, setActiveSub] = useState(null);
+  const [subscriptions, setSubscriptions] = useState([]);
   const [notes, setNotes] = useState("Annual membership");
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
@@ -557,22 +619,46 @@ const SubscriptionPage = () => {
     setLoading(true);
     setError("");
     try {
-      const [planData, profileData, subData] = await Promise.all([
-        getSubscriptionPlans(),
-        getProfile().catch(() => null),
-        getActiveSubscription(userId),
-      ]);
+      if (isAdmin) {
+        const [planData, subscriptionData] = await Promise.all([
+          getSubscriptionPlans(),
+          getAllSubscriptions({
+            page: 0,
+            size: 1000,
+            sortBy: "createdAt",
+            sortDirection: "DESC",
+          }),
+        ]);
 
-      // Prefer API data; fall back to static plans when API returns nothing
-      const fetched = Array.isArray(planData)
-        ? planData
-        : planData?.content || [];
-      setPlans(fetched.length > 0 ? fetched : STATIC_PLANS);
-      const resolvedSubscription =
-        profileData?.activeSubscription || subData || null;
-      setActiveSub(
-        isFreePlan(resolvedSubscription) ? null : resolvedSubscription,
-      );
+        const fetched = Array.isArray(planData)
+          ? planData
+          : planData?.content || [];
+        setPlans(fetched.length > 0 ? fetched : STATIC_PLANS);
+        setSubscriptions(
+          Array.isArray(subscriptionData)
+            ? subscriptionData
+            : subscriptionData?.content || [],
+        );
+        setActiveSub(null);
+      } else {
+        const [planData, profileData, subData] = await Promise.all([
+          getSubscriptionPlans(),
+          getProfile().catch(() => null),
+          getActiveSubscription(userId),
+        ]);
+
+        // Prefer API data; fall back to static plans when API returns nothing
+        const fetched = Array.isArray(planData)
+          ? planData
+          : planData?.content || [];
+        setPlans(fetched.length > 0 ? fetched : STATIC_PLANS);
+        const resolvedSubscription =
+          profileData?.activeSubscription || subData || null;
+        setActiveSub(
+          isFreePlan(resolvedSubscription) ? null : resolvedSubscription,
+        );
+        setSubscriptions([]);
+      }
     } catch (err) {
       setError(err.message || "Failed to load subscription data");
       setPlans(STATIC_PLANS); // always show plans even on error
@@ -583,7 +669,44 @@ const SubscriptionPage = () => {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [isAdmin, userId]);
+
+  const adminSubscriptionUsers = useMemo(() => {
+    const grouped = uniqueByUserId(subscriptions).map((row) => ({
+      id: row.userId,
+      fullName: row.userName,
+      email: row.userEmail,
+    }));
+
+    const userMap = new Map();
+    grouped.forEach((userRow) => {
+      if (userRow?.id == null) return;
+      userMap.set(String(userRow.id), userRow);
+    });
+
+    return Array.from(userMap.values())
+      .map((userRow) => {
+        const userSubs = subscriptions.filter(
+          (subscription) => String(subscription.userId) === String(userRow.id),
+        );
+        const latest = latestSubscription(userSubs);
+        return {
+          ...userRow,
+          totalSubscriptions: userSubs.length,
+          latestSubscription: latest,
+          activeSubscriptions: userSubs.filter(
+            (subscription) => subscription.isActive,
+          ).length,
+          expiredSubscriptions: userSubs.filter(
+            (subscription) => subscription.isExpired,
+          ).length,
+          userSubscriptions: userSubs,
+        };
+      })
+      .sort((left, right) =>
+        (left.fullName || "").localeCompare(right.fullName || ""),
+      );
+  }, [subscriptions]);
 
   const activePlanCode = activeSub?.planCode || "FREE";
   const normalizedActivePlanCode = normalizePlanCode(activePlanCode);
@@ -682,6 +805,425 @@ const SubscriptionPage = () => {
     boxShadow: focused ? "0 0 0 3px rgba(99,102,241,.12)" : "none",
     transition: "border-color .18s, box-shadow .18s, background .18s",
   });
+
+  if (isAdmin) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: T.bg,
+          padding: "32px 28px 72px",
+          fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            marginBottom: 28,
+            animation: "subFadeUp .3s ease both",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 5,
+              }}
+            >
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: T.radiusXs,
+                  background: "linear-gradient(145deg,#4f46e5,#6d28d9)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <CardMembership sx={{ fontSize: 19, color: "#fff" }} />
+              </div>
+              <h1
+                style={{
+                  fontFamily: "'Playfair Display', Georgia, serif",
+                  fontSize: 26,
+                  fontWeight: 700,
+                  color: T.text,
+                  letterSpacing: "-.3px",
+                  margin: 0,
+                }}
+              >
+                All Subscriptions
+              </h1>
+            </div>
+            <p
+              style={{
+                fontSize: 13,
+                color: T.faint,
+                margin: 0,
+                paddingLeft: 46,
+              }}
+            >
+              View every user and their current subscription plan.
+            </p>
+          </div>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: ".1em",
+              textTransform: "uppercase",
+              padding: "5px 16px",
+              borderRadius: 20,
+              background: "#d1fae5",
+              color: "#065f46",
+              border: "1px solid #a7f3d0",
+              animation: "subPulse 2.5s ease infinite",
+            }}
+          >
+            ● Admin View
+          </span>
+        </div>
+
+        {error && (
+          <Banner type="error" message={error} onClose={() => setError("")} />
+        )}
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 14,
+            marginBottom: 20,
+          }}
+        >
+          <div
+            style={{
+              background: "linear-gradient(145deg,#1e293b 0%,#334155 100%)",
+              borderRadius: T.radius,
+              padding: "18px 20px",
+              color: "#fff",
+              boxShadow: "0 12px 40px rgba(0,0,0,.2)",
+            }}
+          >
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                opacity: 0.65,
+                margin: 0,
+              }}
+            >
+              Users
+            </p>
+            <h2 style={{ fontSize: 32, margin: "6px 0 0" }}>
+              {adminSubscriptionUsers.length}
+            </h2>
+          </div>
+          <div
+            style={{
+              background: "linear-gradient(145deg,#4f46e5 0%,#6d28d9 100%)",
+              borderRadius: T.radius,
+              padding: "18px 20px",
+              color: "#fff",
+              boxShadow: "0 12px 40px rgba(79,70,229,.3)",
+            }}
+          >
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                opacity: 0.65,
+                margin: 0,
+              }}
+            >
+              Active
+            </p>
+            <h2 style={{ fontSize: 32, margin: "6px 0 0" }}>
+              {
+                adminSubscriptionUsers.filter(
+                  (row) => row.latestSubscription?.isActive,
+                ).length
+              }
+            </h2>
+          </div>
+          <div
+            style={{
+              background: "linear-gradient(145deg,#059669 0%,#0d9488 100%)",
+              borderRadius: T.radius,
+              padding: "18px 20px",
+              color: "#fff",
+              boxShadow: "0 12px 40px rgba(5,150,105,.28)",
+            }}
+          >
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                opacity: 0.65,
+                margin: 0,
+              }}
+            >
+              Plans
+            </p>
+            <h2 style={{ fontSize: 32, margin: "6px 0 0" }}>
+              {subscriptions.length}
+            </h2>
+          </div>
+        </div>
+
+        {loading ? (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              paddingTop: 72,
+              gap: 14,
+            }}
+          >
+            <Spinner />
+            <p style={{ color: T.faint, fontSize: ".82rem", margin: 0 }}>
+              Loading subscriptions…
+            </p>
+          </div>
+        ) : adminSubscriptionUsers.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {adminSubscriptionUsers.map((row, index) => {
+              const latest = row.latestSubscription;
+              const isAdminAccount = String(row.id) === String(userId);
+              const themeKey = isAdminAccount
+                ? "ADMIN"
+                : normalizePlanCode(latest?.planCode || "FREE");
+              const subscriptionLabel = isAdminAccount
+                ? "Manager"
+                : getSubscriptionLabel(latest);
+              const planLabel = isAdminAccount
+                ? "Manager"
+                : latest?.planName || latest?.planCode || "—";
+              const planCode = isAdminAccount
+                ? "MANAGER"
+                : latest?.planCode || "—";
+              const endDateLabel = isAdminAccount
+                ? "No end date"
+                : latest?.endDate
+                  ? formatDate(latest.endDate)
+                  : "—";
+              return (
+                <div
+                  key={row.id}
+                  style={{
+                    background: T.surface,
+                    border: `1px solid ${T.border}`,
+                    borderRadius: T.radius,
+                    overflow: "hidden",
+                    boxShadow: "0 1px 4px rgba(0,0,0,.05)",
+                    animation: `subFadeUp .42s ease ${Math.min(index * 0.06, 0.4)}s both`,
+                  }}
+                >
+                  <div
+                    style={{
+                      background:
+                        CURRENT_PLAN_THEMES[themeKey]?.gradient ||
+                        CURRENT_PLAN_THEMES.FREE.gradient,
+                      padding: "18px 20px",
+                      color: "#fff",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                      }}
+                    >
+                      <div>
+                        <p
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            opacity: 0.6,
+                            margin: 0,
+                            textTransform: "uppercase",
+                            letterSpacing: ".08em",
+                          }}
+                        >
+                          User
+                        </p>
+                        <h3 style={{ fontSize: 20, margin: "4px 0 0" }}>
+                          {row.fullName || "Unknown user"}
+                        </h3>
+                        <p
+                          style={{
+                            fontSize: 12,
+                            opacity: 0.75,
+                            margin: "4px 0 0",
+                          }}
+                        >
+                          {row.email || `User #${row.id}`}
+                        </p>
+                      </div>
+                      <PeopleAlt sx={{ fontSize: 26, opacity: 0.7 }} />
+                    </div>
+                  </div>
+                  <div style={{ padding: 18, display: "grid", gap: 10 }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          padding: "4px 10px",
+                          borderRadius: 999,
+                          background: isAdminAccount
+                            ? "#ede9fe"
+                            : latest?.isActive
+                              ? "#d1fae5"
+                              : latest?.isExpired
+                                ? "#fee2e2"
+                                : "#fef3c7",
+                          color: isAdminAccount
+                            ? "#6d28d9"
+                            : latest?.isActive
+                              ? "#065f46"
+                              : latest?.isExpired
+                                ? "#b91c1c"
+                                : "#92400e",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {subscriptionLabel}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          padding: "4px 10px",
+                          borderRadius: 999,
+                          background: "#f1f5f9",
+                          color: "#334155",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {row.totalSubscriptions} record
+                        {row.totalSubscriptions !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+
+                    <div style={{ display: "grid", gap: 8 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          fontSize: 12,
+                        }}
+                      >
+                        <span style={{ color: T.faint }}>Plan</span>
+                        <span style={{ fontWeight: 700, color: T.text2 }}>
+                          {planLabel}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          fontSize: 12,
+                        }}
+                      >
+                        <span style={{ color: T.faint }}>Code</span>
+                        <span style={{ fontWeight: 700, color: T.text2 }}>
+                          {planCode}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          fontSize: 12,
+                        }}
+                      >
+                        <span style={{ color: T.faint }}>Started</span>
+                        <span style={{ fontWeight: 700, color: T.text2 }}>
+                          {latest?.startDate
+                            ? formatDate(latest.startDate)
+                            : "—"}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          fontSize: 12,
+                        }}
+                      >
+                        <span style={{ color: T.faint }}>Ends</span>
+                        <span style={{ fontWeight: 700, color: T.text2 }}>
+                          {endDateLabel}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          fontSize: 12,
+                        }}
+                      >
+                        <span style={{ color: T.faint }}>Priority</span>
+                        <span style={{ fontWeight: 700, color: T.text2 }}>
+                          {latest?.priorityReservation ? "Yes" : "No"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div
+            style={{
+              background: T.surface,
+              border: "1.5px dashed #e2e8f0",
+              borderRadius: T.radius,
+              padding: "80px 24px",
+              textAlign: "center",
+              animation: "subFadeUp .35s ease both",
+            }}
+          >
+            <CardMembership
+              sx={{
+                fontSize: 40,
+                color: "#cbd5e1",
+                display: "block",
+                margin: "0 auto 16px",
+              }}
+            />
+            <p
+              style={{
+                fontSize: "1rem",
+                fontWeight: 700,
+                color: T.text2,
+                margin: "0 0 6px",
+              }}
+            >
+              No subscriptions found
+            </p>
+            <p style={{ fontSize: ".82rem", color: T.faint, margin: 0 }}>
+              No user subscriptions are available yet.
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   /* ─────────────────────────────────
      RENDER

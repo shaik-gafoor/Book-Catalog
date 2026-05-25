@@ -139,6 +139,19 @@ public class FineServiceImpl implements FineService {
         return fineMapper.toDTO(savedFine);
     }
 
+        @Override
+        public void deleteFine(Long fineId) throws Exception {
+                User currentUser = userService.getCurrentUser();
+                if (!UserRole.ROLE_ADMIN.equals(currentUser.getRole())) {
+                        throw new Exception("Only admin can delete fines");
+                }
+
+                Fine fine = fineRepository.findById(fineId)
+                                .orElseThrow(() -> new Exception("Fine not found with id: " + fineId));
+
+                fineRepository.delete(fine);
+        }
+
     @Override
     public List<FineDTO> getMyFines(FineStatus status, FineType type) throws Exception {
         User currentUser = userService.getCurrentUser();

@@ -857,6 +857,8 @@ export const createFine = (payload) =>
   request("/api/fines", { method: "POST", body: payload });
 export const payFine = (id, transactionId) =>
   request(`/api/fines/${id}/pay`, { method: "POST", query: { transactionId } });
+export const deleteFine = (id) =>
+  request(`/api/fines/${id}`, { method: "DELETE" });
 export const waiveFine = (payload) =>
   request("/api/fines/waive", { method: "POST", body: payload });
 export const getMyFines = (params) =>

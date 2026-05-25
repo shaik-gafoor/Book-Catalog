@@ -546,6 +546,16 @@ const BookCard = ({
                 Checkout
               </Btn>
             )}
+            {onDelete && (
+              <Btn
+                variant="ghost"
+                onClick={handleDeleteAction}
+                style={{ color: "#b91c1c", borderColor: "#fecaca" }}
+              >
+                <Delete sx={{ fontSize: 14 }} />
+                Delete
+              </Btn>
+            )}
           </div>
           {checkoutWarning && onCheckout && (
             <p
@@ -808,12 +818,6 @@ const BookCard = ({
                     >
                       <AutoStories sx={{ fontSize: 14 }} />
                       Checkout
-                    </Btn>
-                  )}
-                  {onDelete && (
-                    <Btn variant="ghost" onClick={handleDeleteAction}>
-                      <Delete sx={{ fontSize: 14 }} />
-                      Delete
                     </Btn>
                   )}
                   {onDelete && (

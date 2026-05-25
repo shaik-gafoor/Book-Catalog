@@ -11,6 +11,7 @@ import RequireAuth from "./pages/Auth/RequireAuth.jsx";
 import MyFines from "./pages/MyFines/MyFines.jsx";
 import SubscriptionPage from "./pages/Subscription/SubscriptionPage.jsx";
 import WishlistPage from "./pages/Wishlist/WishlistPage.jsx";
+import UsersPage from "./pages/Users/UsersPage.jsx";
 import ProfilePage from "./pages/Profile/ProfilePage.jsx";
 import SettingsPage from "./pages/Settings/SettingsPage.jsx";
 import AdminPage from "./pages/Admin/AdminPage.jsx";
@@ -29,6 +30,7 @@ function App() {
           <Route path="/my-fines" element={<MyFines />} />
           <Route path="/subscriptions" element={<SubscriptionPage />} />
           <Route path="/wishlist" element={<WishlistPage />} />
+          <Route path="/users" element={<UsersPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/admin" element={<AdminPage />} />

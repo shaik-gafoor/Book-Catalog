@@ -11,12 +11,14 @@ import {
   AccountBalanceWallet,
   BookmarkBorder,
   EventNote,
+  Delete,
   MenuBook,
   PeopleAlt,
   ReceiptLong,
 } from "@mui/icons-material";
 import {
   deleteBook,
+  deleteFine,
   getAllFines,
   getAllSubscriptions,
   getAllWishlists,
@@ -41,6 +43,20 @@ const isReservationComplete = (status) =>
     String(status || "").toUpperCase(),
   );
 
+const isFineActive = (status) =>
+  String(status || "").toUpperCase() === "PENDING";
+const isFinePending = (status) =>
+  String(status || "").toUpperCase() === "PARTIALLY_PAID";
+const isFineCompleted = (status) =>
+  ["PAID", "WAIVED"].includes(String(status || "").toUpperCase());
+
+const getWishlistStatus = (entry) => {
+  const book = entry?.book || {};
+  const activeBook =
+    book.active !== false && Number(book.availableCopies || 0) > 0;
+  return activeBook ? "ACTIVE" : "PENDING";
+};
+
 const latestRecord = (items) =>
   [...items].sort((left, right) => {
     const leftTime = new Date(
@@ -59,6 +75,32 @@ const latestRecord = (items) =>
     ).getTime();
     return rightTime - leftTime;
   })[0];
+
+const uniqueByUserId = (items) => {
+  const map = new Map();
+  items.forEach((item) => {
+    if (!item?.userId) return;
+    const key = String(item.userId);
+    const current = map.get(key);
+    if (!current) {
+      map.set(key, item);
+      return;
+    }
+
+    const currentTime = new Date(
+      current.updatedAt || current.createdAt || current.checkoutDate || 0,
+    ).getTime();
+    const nextTime = new Date(
+      item.updatedAt || item.createdAt || item.checkoutDate || 0,
+    ).getTime();
+
+    if (nextTime >= currentTime) {
+      map.set(key, item);
+    }
+  });
+
+  return Array.from(map.values());
+};
 
 const Tone = {
   slate: { bg: "#e2e8f0", fg: "#334155" },
@@ -319,13 +361,16 @@ const AdminPage = () => {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshingBooks, setRefreshingBooks] = useState(false);
+  const [deletingFineId, setDeletingFineId] = useState(null);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       setError("");
+      setMessage("");
       try {
         const [
           usersData,
@@ -398,7 +443,30 @@ const AdminPage = () => {
   }, [subscriptions]);
 
   const usersWithMetrics = useMemo(() => {
-    return users
+    const loanUsers = uniqueByUserId(loans).map((loanUser) => ({
+      id: loanUser.userId,
+      fullName: loanUser.userName,
+      email: loanUser.userEmail,
+    }));
+    const reservationUsers = uniqueByUserId(reservations).map(
+      (reservationUser) => ({
+        id: reservationUser.userId,
+        fullName: reservationUser.userName,
+        email: reservationUser.userEmail,
+      }),
+    );
+
+    const userMap = new Map();
+
+    [...users, ...loanUsers, ...reservationUsers].forEach((user) => {
+      if (!user?.id) return;
+      const key = String(user.id);
+      if (!userMap.has(key)) {
+        userMap.set(key, user);
+      }
+    });
+
+    return Array.from(userMap.values())
       .map((user) => {
         const userId = String(user.id);
         const userLoans = loans.filter(
@@ -412,6 +480,12 @@ const AdminPage = () => {
         );
         const userWishlists = wishlists.filter(
           (entry) => String(entry.userId) === userId,
+        );
+        const activeWishlists = userWishlists.filter(
+          (entry) => getWishlistStatus(entry) === "ACTIVE",
+        );
+        const pendingWishlists = userWishlists.filter(
+          (entry) => getWishlistStatus(entry) === "PENDING",
         );
         const subscription = subscriptionByUserId.get(userId);
 
@@ -439,12 +513,22 @@ const AdminPage = () => {
             isReservationComplete(reservation.status),
           ).length,
           fineCount: userFines.length,
+          activeFineCount: userFines.filter((fine) => isFineActive(fine.status))
+            .length,
+          pendingFineCount: userFines.filter((fine) =>
+            isFinePending(fine.status),
+          ).length,
+          completedFineCount: userFines.filter((fine) =>
+            isFineCompleted(fine.status),
+          ).length,
           fineOutstanding: userFines.reduce(
             (sum, fine) =>
               sum + Number(fine.amountOutstanding ?? fine.amount ?? 0),
             0,
           ),
           wishlistCount: userWishlists.length,
+          activeWishlistCount: activeWishlists.length,
+          pendingWishlistCount: pendingWishlists.length,
           latestLoan: latestRecord(userLoans),
           latestReservation: latestRecord(userReservations),
           latestFine: latestRecord(userFines),
@@ -520,6 +604,27 @@ const AdminPage = () => {
     }
   };
 
+  const handleDeleteFine = async (fine) => {
+    const confirmed = window.confirm(
+      `Delete fine #${fine.id} for ${fine.userName || fine.userEmail || "this user"}?`,
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeletingFineId(fine.id);
+      setError("");
+      const res = await deleteFine(fine.id);
+      setFines((current) =>
+        current.filter((item) => String(item.id) !== String(fine.id)),
+      );
+      setMessage(res?.message || "Fine deleted");
+    } catch (err) {
+      setError(err.message || "Failed to delete fine");
+    } finally {
+      setDeletingFineId(null);
+    }
+  };
+
   const userColumns = [
     {
       key: "subscription",
@@ -590,10 +695,30 @@ const AdminPage = () => {
 
   const fineColumns = [
     {
-      key: "fineCount",
-      label: "Count",
+      key: "activeFineCount",
+      label: "Active",
       render: (row) => (
-        <Pill tone={row.fineCount > 0 ? "red" : "slate"}>{row.fineCount}</Pill>
+        <Pill tone={row.activeFineCount > 0 ? "red" : "slate"}>
+          {row.activeFineCount}
+        </Pill>
+      ),
+    },
+    {
+      key: "pendingFineCount",
+      label: "Pending",
+      render: (row) => (
+        <Pill tone={row.pendingFineCount > 0 ? "amber" : "slate"}>
+          {row.pendingFineCount}
+        </Pill>
+      ),
+    },
+    {
+      key: "completedFineCount",
+      label: "Completed",
+      render: (row) => (
+        <Pill tone={row.completedFineCount > 0 ? "green" : "slate"}>
+          {row.completedFineCount}
+        </Pill>
       ),
     },
     {
@@ -605,24 +730,24 @@ const AdminPage = () => {
         </Pill>
       ),
     },
-    {
-      key: "latestFine",
-      label: "Latest",
-      render: (row) => (
-        <Typography variant="body2" sx={{ color: "#475569" }}>
-          {row.latestFine ? formatDateTime(row.latestFine.createdAt) : "—"}
-        </Typography>
-      ),
-    },
   ];
 
   const wishlistColumns = [
     {
-      key: "wishlistCount",
-      label: "Items",
+      key: "activeWishlistCount",
+      label: "Active",
       render: (row) => (
-        <Pill tone={row.wishlistCount > 0 ? "violet" : "slate"}>
-          {row.wishlistCount}
+        <Pill tone={row.activeWishlistCount > 0 ? "green" : "slate"}>
+          {row.activeWishlistCount}
+        </Pill>
+      ),
+    },
+    {
+      key: "pendingWishlistCount",
+      label: "Pending",
+      render: (row) => (
+        <Pill tone={row.pendingWishlistCount > 0 ? "amber" : "slate"}>
+          {row.pendingWishlistCount}
         </Pill>
       ),
     },
@@ -635,13 +760,6 @@ const AdminPage = () => {
             ? formatDateTime(row.latestWishlist.addedAt)
             : "—"}
         </Typography>
-      ),
-    },
-    {
-      key: "subscriptionLabel",
-      label: "Subscription",
-      render: (row) => (
-        <Pill tone={row.subscriptionTone}>{row.subscriptionLabel}</Pill>
       ),
     },
   ];
@@ -677,6 +795,11 @@ const AdminPage = () => {
             {error}
           </Alert>
         )}
+        {message && (
+          <Alert severity="success" sx={{ whiteSpace: "pre-wrap" }}>
+            {message}
+          </Alert>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <StatCard
@@ -706,7 +829,7 @@ const AdminPage = () => {
           <StatCard
             label="Wishlist users"
             value={new Set(wishlists.map((entry) => String(entry.userId))).size}
-            helper="Users saving books"
+            helper={`Active ${wishlists.filter((entry) => getWishlistStatus(entry) === "ACTIVE").length} · Pending ${wishlists.filter((entry) => getWishlistStatus(entry) === "PENDING").length}`}
             icon={<BookmarkBorder fontSize="small" />}
           />
           <StatCard
@@ -838,8 +961,23 @@ const AdminPage = () => {
                         Pending {selectedUser.pendingLoans}
                       </Pill>
                       <Pill tone="red">Fines {selectedUser.fineCount}</Pill>
+                      <Pill tone="red">
+                        Active {selectedUser.activeFineCount}
+                      </Pill>
+                      <Pill tone="amber">
+                        Pending {selectedUser.pendingFineCount}
+                      </Pill>
+                      <Pill tone="green">
+                        Completed {selectedUser.completedFineCount}
+                      </Pill>
                       <Pill tone="violet">
                         Wishlist {selectedUser.wishlistCount}
+                      </Pill>
+                      <Pill tone="green">
+                        Active {selectedUser.activeWishlistCount}
+                      </Pill>
+                      <Pill tone="amber">
+                        Pending {selectedUser.pendingWishlistCount}
                       </Pill>
                     </Box>
 
@@ -908,12 +1046,51 @@ const AdminPage = () => {
                         items={selectedFines}
                         renderItem={(fine) => (
                           <Box sx={{ display: "grid", gap: 0.5 }}>
-                            <Typography
-                              variant="subtitle2"
-                              sx={{ fontWeight: 800 }}
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "flex-start",
+                                gap: 1.5,
+                              }}
                             >
-                              {fine.bookTitle || `Fine #${fine.id}`}
-                            </Typography>
+                              <Typography
+                                variant="subtitle2"
+                                sx={{ fontWeight: 800 }}
+                              >
+                                {fine.bookTitle || `Fine #${fine.id}`}
+                              </Typography>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteFine(fine)}
+                                disabled={
+                                  String(deletingFineId) === String(fine.id)
+                                }
+                                style={{
+                                  border: "1px solid #fecaca",
+                                  background: "#fff1f2",
+                                  color: "#b91c1c",
+                                  borderRadius: 8,
+                                  padding: "6px 10px",
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  cursor:
+                                    String(deletingFineId) === String(fine.id)
+                                      ? "not-allowed"
+                                      : "pointer",
+                                  opacity:
+                                    String(deletingFineId) === String(fine.id)
+                                      ? 0.6
+                                      : 1,
+                                }}
+                              >
+                                <Delete sx={{ fontSize: 14 }} />
+                                Delete
+                              </button>
+                            </Box>
                             <Typography
                               variant="body2"
                               sx={{ color: "#64748b" }}
@@ -939,6 +1116,19 @@ const AdminPage = () => {
                         items={selectedWishlists}
                         renderItem={(entry) => (
                           <Box sx={{ display: "grid", gap: 0.5 }}>
+                            <Box
+                              sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}
+                            >
+                              <Pill
+                                tone={
+                                  getWishlistStatus(entry) === "ACTIVE"
+                                    ? "green"
+                                    : "amber"
+                                }
+                              >
+                                {getWishlistStatus(entry)}
+                              </Pill>
+                            </Box>
                             <Typography
                               variant="subtitle2"
                               sx={{ fontWeight: 800 }}

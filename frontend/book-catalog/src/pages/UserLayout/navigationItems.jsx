@@ -7,6 +7,7 @@ import {
   CardMembership as CardMembershipIcon,
   Favorite as FavoriteIcon,
   Person as PersonIcon,
+  PeopleAlt as PeopleAltIcon,
   Settings as SettingsIcon,
   Receipt as ReceiptIcon,
 } from "@mui/icons-material";
@@ -63,6 +64,13 @@ export const navigationItems = [
     path: "/wishlist",
     icon: <FavoriteIcon fontSize="small" />,
     description: "Saved Books",
+  },
+  {
+    title: "Users",
+    path: "/users",
+    icon: <PeopleAltIcon fontSize="small" />,
+    description: "Registered Accounts",
+    adminOnly: true,
   },
 ];
 

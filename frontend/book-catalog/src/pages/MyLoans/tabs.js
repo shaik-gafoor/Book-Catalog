@@ -1,8 +1,8 @@
 export const tabs = [
   { label: "All", value: null },
+  { label: "Pending", value: "PENDING" },
   { label: "Active", value: "ACTIVE" },
-  { label: "Overdue", value: "OVERDUE" },
-  { label: "Returned", value: "RETURNED" },
+  { label: "Completed", value: "COMPLETED" },
   { label: "Lost", value: "LOST" },
   { label: "Damaged", value: "DAMAGED" },
 ];

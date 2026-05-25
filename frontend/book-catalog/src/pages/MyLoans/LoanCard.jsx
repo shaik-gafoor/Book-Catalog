@@ -29,7 +29,7 @@ const T = {
 
 const STATUS_CFG = {
   CHECKED_OUT: {
-    label: "Checked Out",
+    label: "Pending",
     gradient: "linear-gradient(135deg,#4f46e5,#7c3aed)",
     bg: "#eff6ff",
     border: "#c7d2fe",
@@ -45,7 +45,7 @@ const STATUS_CFG = {
     dot: "#34d399",
   },
   CURRENT: {
-    label: "Active",
+    label: "Pending",
     gradient: "linear-gradient(135deg,#059669,#0d9488)",
     bg: "#f0fdf4",
     border: "#bbf7d0",
@@ -61,7 +61,7 @@ const STATUS_CFG = {
     dot: "#f87171",
   },
   RETURNED: {
-    label: "Returned",
+    label: "Completed",
     gradient: "linear-gradient(135deg,#0369a1,#0284c7)",
     bg: "#f0f9ff",
     border: "#bae6fd",

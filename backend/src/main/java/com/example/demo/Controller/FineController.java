@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.List;
 
 @RestController
@@ -44,6 +45,12 @@ public class FineController {
     ) throws Exception {
         FineDTO fineDTO = fineService.waiveFine(waiveFineRequest);
         return ResponseEntity.ok(fineDTO);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteFine(@PathVariable Long id) throws Exception {
+        fineService.deleteFine(id);
+        return ResponseEntity.ok(Map.of("message", "Fine deleted"));
     }
 
     @GetMapping("/my")
