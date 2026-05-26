@@ -2461,9 +2461,24 @@ Sample response:
 - `POST /api/books/bulk` is intended to return created books, but the controller currently has a return-type mismatch.
 - `GET /api/users/profile` returns a one-item JSON array instead of a single object.
 
-## H2 Console
+## Database (MySQL)
 
-- URL: `/h2-console`
-- JDBC URL: `jdbc:h2:mem:demo`
-- Username: `sa`
-- Password: empty
+This backend expects a MySQL database. Configure the datasource in `src/main/resources/application-local.properties` or via environment variables.
+
+Example MySQL properties:
+
+```
+spring.datasource.url=jdbc:mysql://localhost:3306/book_catalog?useSSL=false&serverTimezone=UTC
+spring.datasource.username=root
+spring.datasource.password=secret
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.jpa.hibernate.ddl-auto=validate
+```
+
+Run a local MySQL instance with Docker for quick development:
+
+```bash
+docker run --name bookdb -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=book_catalog -p 3306:3306 -d mysql:8
+```
+
+Use Flyway or Liquibase for schema migrations in production and avoid using in-memory databases for real data.

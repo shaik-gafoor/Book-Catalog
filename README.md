@@ -94,9 +94,25 @@ The frontend runs on Vite's dev server (by default `http://localhost:5173`) and 
 
 ## Database and Migrations
 
-This project uses a relational database configured via Spring properties. If the project includes an ORM (JPA/Hibernate), schema generation or migration files may be present. For production, use a managed migration tool (Flyway or Liquibase).
+This project uses a relational database configured via Spring properties. The project is intended to use MySQL for both development and production. If the project includes an ORM (JPA/Hibernate), schema generation or migration files may be present. For production, use a managed migration tool such as Flyway or Liquibase.
 
-For quick local development you can use an in-memory H2 database by setting the datasource URL to an H2 memory URL in `application-local.properties`.
+Example MySQL properties (add to `backend/src/main/resources/application-local.properties` or set as environment variables):
+
+```
+spring.datasource.url=jdbc:mysql://localhost:3306/book_catalog?useSSL=false&serverTimezone=UTC
+spring.datasource.username=root
+spring.datasource.password=secret
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.jpa.hibernate.ddl-auto=validate
+```
+
+Quick local MySQL with Docker:
+
+```bash
+docker run --name bookdb -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=book_catalog -p 3306:3306 -d mysql:8
+```
+
+Adjust the JDBC URL, credentials, and `spring.jpa.hibernate.ddl-auto` policy to match your environment. Use Flyway or Liquibase for safe schema migrations in production.
 
 ## API Overview
 
