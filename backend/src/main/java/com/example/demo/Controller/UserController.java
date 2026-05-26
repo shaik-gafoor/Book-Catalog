@@ -8,9 +8,11 @@ import com.example.demo.payload.response.UserProfileResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.core.Authentication;
 
@@ -40,5 +42,11 @@ public class UserController {
             @RequestBody UpdateProfileRequest request
     ) throws Exception {
         return ResponseEntity.ok(userService.updateProfile(authentication.getName(), request));
+    }
+
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long userId) throws Exception {
+        userService.deleteUser(userId);
+        return ResponseEntity.ok().body("User deleted successfully");
     }
 }

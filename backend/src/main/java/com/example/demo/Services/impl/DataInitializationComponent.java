@@ -6,8 +6,16 @@ import com.example.demo.model.Catalog;
 import com.example.demo.model.SubscriptionPlan;
 import com.example.demo.model.User;
 import com.example.demo.repository.BookRepository;
+import com.example.demo.repository.BookReviewRepository;
+import com.example.demo.repository.BookLoanRepository;
+import com.example.demo.repository.FineRepository;
 import com.example.demo.repository.CatalogRepository;
+import com.example.demo.repository.PasswordResetTokenRepository;
+import com.example.demo.repository.PaymentRepository;
+import com.example.demo.repository.ReservationRepository;
 import com.example.demo.repository.SubscriptionPlanRepository;
+import com.example.demo.repository.SubscriptionRepository;
+import com.example.demo.repository.WishlistRepository;
 import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
@@ -25,11 +33,21 @@ public class DataInitializationComponent implements CommandLineRunner {
     public final CatalogRepository catalogRepository;
     public final BookRepository bookRepository;
     public final SubscriptionPlanRepository subscriptionPlanRepository;
+    public final SubscriptionRepository subscriptionRepository;
+    public final BookLoanRepository bookLoanRepository;
+    public final ReservationRepository reservationRepository;
+    public final WishlistRepository wishlistRepository;
+    public final BookReviewRepository bookReviewRepository;
+    public final FineRepository fineRepository;
+    public final PaymentRepository paymentRepository;
+    public final PasswordResetTokenRepository passwordResetTokenRepository;
     public final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args){
         initializedAdminUser();
+        removeLegacyUser("gafoor7898@gmail.com");
+        normalizeUserRoles();
         initializedSubscriptionPlans();
         initializedCatalogsAndBooks();
     }
@@ -49,6 +67,48 @@ public class DataInitializationComponent implements CommandLineRunner {
         admin.setRole(String.valueOf(UserRole.ROLE_ADMIN));
 
         userRepository.save(admin);
+    }
+
+    private void normalizeUserRoles() {
+        String adminEmail = "admin@gmail.com";
+
+        List<User> users = userRepository.findAll();
+        boolean changed = false;
+
+        for (User user : users) {
+            String email = user.getEmail();
+            boolean isAdminAccount = email != null && email.equalsIgnoreCase(adminEmail);
+            String desiredRole = isAdminAccount ? String.valueOf(UserRole.ROLE_ADMIN) : String.valueOf(UserRole.ROLE_USER);
+
+            if (!desiredRole.equals(user.getRole())) {
+                user.setRole(desiredRole);
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            userRepository.saveAll(users);
+        }
+    }
+
+    private void removeLegacyUser(String email) {
+        User user = userRepository.findByEmailIgnoreCase(email);
+        if (user == null) {
+            return;
+        }
+
+        Long userId = user.getId();
+
+        fineRepository.deleteByUserId(userId);
+        passwordResetTokenRepository.deleteByUserId(userId);
+        paymentRepository.deleteByUserId(userId);
+        bookReviewRepository.deleteByUserId(userId);
+        wishlistRepository.deleteByUserId(userId);
+        reservationRepository.deleteByUserId(userId);
+        bookLoanRepository.deleteByUserId(userId);
+        subscriptionRepository.deleteByUserId(userId);
+
+        userRepository.delete(user);
     }
 
             private void initializedSubscriptionPlans() {

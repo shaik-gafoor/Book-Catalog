@@ -126,4 +126,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @Param("activeOnly") boolean activeOnly,
             Pageable pageable
     );
+
+        void deleteByUserId(Long userId);
 }

@@ -30,6 +30,7 @@ export const navigationItems = [
     path: "/add-book",
     icon: <LibraryAddIcon fontSize="small" />,
     description: "Upload a new title",
+    adminOnly: true,
   },
   {
     title: "My Loans",

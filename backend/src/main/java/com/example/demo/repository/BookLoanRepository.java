@@ -50,4 +50,6 @@ public interface BookLoanRepository extends JpaRepository<BookLoan, Long> {
     );
 
     boolean existsByUserIdAndBookIdAndStatus(Long userId, Long bookId, BookLoanStatus status);
+
+        void deleteByUserId(Long userId);
 }
