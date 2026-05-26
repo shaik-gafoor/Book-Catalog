@@ -15,4 +15,5 @@ public interface UserService {
     public List<UserDTO> getAllUsers();
     User findById(Long id) throws Exception;
     UserDTO updateProfile(String email, UpdateProfileRequest request) throws Exception;
+    void deleteUser(Long userId) throws Exception;
 }

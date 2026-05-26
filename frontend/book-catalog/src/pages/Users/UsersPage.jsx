@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
+  Button,
   Card,
   CircularProgress,
   Divider,
@@ -19,8 +20,14 @@ import {
   CalendarMonth,
   Shield,
   Person,
+  Delete,
 } from "@mui/icons-material";
-import { getAuthUser, getUsers } from "../../api/libraryApi";
+import {
+  deleteUser,
+  getAuthUser,
+  getUsers,
+  isAdminUser,
+} from "../../api/libraryApi";
 
 const fmt = (value) => {
   if (!value) return "—";
@@ -182,14 +189,22 @@ const UsersPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionMessage, setActionMessage] = useState("");
+  const [deletingUserId, setDeletingUserId] = useState(null);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [selectedUserId, setSelectedUserId] = useState("");
+
+  const visibleUsers = useMemo(
+    () => users.filter((user) => !isAdminUser(user)),
+    [users],
+  );
 
   useEffect(() => {
     const loadUsers = async () => {
       setLoading(true);
       setError("");
+      setActionMessage("");
       try {
         const data = await getUsers();
         setUsers(Array.isArray(data) ? data : data?.content || []);
@@ -203,9 +218,45 @@ const UsersPage = () => {
     loadUsers();
   }, []);
 
+  const refreshSelection = (nextUsers) => {
+    if (nextUsers.length === 0) {
+      setSelectedUserId("");
+      return;
+    }
+    if (nextUsers.some((user) => String(user.id) === String(selectedUserId))) {
+      return;
+    }
+    setSelectedUserId(String(nextUsers[0].id));
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (!user?.id) return;
+    const confirmed = window.confirm(
+      `Delete ${user.fullName || user.email || "this user"} from the database?`,
+    );
+    if (!confirmed) return;
+
+    setDeletingUserId(user.id);
+    setError("");
+    setActionMessage("");
+    try {
+      await deleteUser(user.id);
+      const nextUsers = users.filter(
+        (entry) => String(entry.id) !== String(user.id),
+      );
+      setUsers(nextUsers);
+      refreshSelection(nextUsers.filter((entry) => !isAdminUser(entry)));
+      setActionMessage("User deleted successfully.");
+    } catch (err) {
+      setError(err.message || "Failed to delete user");
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
+
   const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return users
+    return visibleUsers
       .filter((user) => {
         const role = String(user.role || "").toUpperCase();
         if (roleFilter !== "ALL" && role !== roleFilter) return false;
@@ -227,7 +278,7 @@ const UsersPage = () => {
           right.fullName || right.email || "",
         ),
       );
-  }, [users, search, roleFilter]);
+  }, [visibleUsers, search, roleFilter]);
 
   useEffect(() => {
     if (!selectedUserId && filteredUsers.length > 0) {
@@ -249,24 +300,24 @@ const UsersPage = () => {
     const now = Date.now();
     const recentWindow = 1000 * 60 * 60 * 24 * 30;
     return {
-      total: users.length,
+      total: visibleUsers.length,
       admins: users.filter((user) =>
         String(user.role || "")
           .toUpperCase()
           .includes("ADMIN"),
       ).length,
-      recentLogin: users.filter((user) => {
+      recentLogin: visibleUsers.filter((user) => {
         if (!user.lastLogin) return false;
         const time = new Date(user.lastLogin).getTime();
         return Number.isFinite(time) && now - time <= recentWindow;
       }).length,
-      registeredRecent: users.filter((user) => {
+      registeredRecent: visibleUsers.filter((user) => {
         if (!user.createdAt) return false;
         const time = new Date(user.createdAt).getTime();
         return Number.isFinite(time) && now - time <= recentWindow;
       }).length,
     };
-  }, [users]);
+  }, [users, visibleUsers]);
 
   if (!isAdmin) {
     return (
@@ -294,6 +345,12 @@ const UsersPage = () => {
         {error && (
           <Alert severity="error" sx={{ whiteSpace: "pre-wrap" }}>
             {error}
+          </Alert>
+        )}
+
+        {actionMessage && (
+          <Alert severity="success" sx={{ whiteSpace: "pre-wrap" }}>
+            {actionMessage}
           </Alert>
         )}
 
@@ -363,7 +420,6 @@ const UsersPage = () => {
               >
                 <MenuItem value="ALL">All roles</MenuItem>
                 <MenuItem value="ROLE_USER">Users</MenuItem>
-                <MenuItem value="ROLE_ADMIN">Admins</MenuItem>
               </TextField>
             </Box>
           </Box>
@@ -425,14 +481,21 @@ const UsersPage = () => {
                     const isSelected =
                       String(user.id) === String(selectedUserId);
                     return (
-                      <button
+                      <Box
                         key={user.id}
-                        type="button"
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setSelectedUserId(String(user.id))}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setSelectedUserId(String(user.id));
+                          }
+                        }}
                         style={{
                           display: "grid",
                           gridTemplateColumns:
-                            "minmax(220px,1.2fr) repeat(3, minmax(120px, 0.8fr))",
+                            "minmax(220px,1.2fr) repeat(4, minmax(110px, 0.7fr))",
                           gap: 12,
                           alignItems: "center",
                           textAlign: "left",
@@ -509,7 +572,31 @@ const UsersPage = () => {
                         >
                           {fmtDate(user.createdAt)}
                         </Typography>
-                      </button>
+                        <Box
+                          sx={{ display: "flex", justifyContent: "flex-end" }}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <Button
+                            size="small"
+                            color="error"
+                            variant="outlined"
+                            startIcon={<Delete fontSize="small" />}
+                            disabled={deletingUserId === user.id}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleDeleteUser(user);
+                            }}
+                            sx={{
+                              textTransform: "none",
+                              borderRadius: 999,
+                              px: 1.5,
+                              minWidth: 0,
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </Box>
+                      </Box>
                     );
                   })}
                 </Box>
@@ -551,6 +638,17 @@ const UsersPage = () => {
                         Member since {fmtDate(selectedUser.createdAt)}
                       </Pill>
                     </Box>
+
+                    <Button
+                      variant="contained"
+                      color="error"
+                      startIcon={<Delete />}
+                      onClick={() => handleDeleteUser(selectedUser)}
+                      disabled={deletingUserId === selectedUser.id}
+                      sx={{ alignSelf: "flex-start", textTransform: "none" }}
+                    >
+                      Delete User
+                    </Button>
 
                     <Divider />
 

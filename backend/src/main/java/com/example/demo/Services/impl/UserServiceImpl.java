@@ -9,10 +9,17 @@ import com.example.demo.model.User;
 import com.example.demo.payload.dto.UserDTO;
 import com.example.demo.payload.request.UpdateProfileRequest;
 import com.example.demo.payload.response.UserProfileResponse;
+import com.example.demo.repository.BookLoanRepository;
+import com.example.demo.repository.BookReviewRepository;
+import com.example.demo.repository.FineRepository;
+import com.example.demo.repository.PasswordResetTokenRepository;
+import com.example.demo.repository.PaymentRepository;
+import com.example.demo.repository.ReservationRepository;
 import com.example.demo.repository.SubscriptionPlanRepository;
 import com.example.demo.repository.SubscriptionRepository;
 import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +35,12 @@ public class UserServiceImpl implements UserService {
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final SubscriptionMapper subscriptionMapper;
+    private final BookLoanRepository bookLoanRepository;
+    private final ReservationRepository reservationRepository;
+    private final PaymentRepository paymentRepository;
+    private final FineRepository fineRepository;
+    private final BookReviewRepository bookReviewRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Override
     public User getCurrentUser() throws Exception {
@@ -154,5 +167,27 @@ public class UserServiceImpl implements UserService {
 
         User savedUser = userRepository.save(user);
         return UserMapper.toDTO(savedUser);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(Long userId) throws Exception {
+        User user = findById(userId);
+        String email = user.getEmail();
+        if (email != null && email.equalsIgnoreCase("admin@gmail.com")) {
+            throw new Exception("Admin account cannot be deleted");
+        }
+
+        fineRepository.clearWaivedByUser(userId);
+        fineRepository.clearProcessedByUser(userId);
+        fineRepository.deleteByUserId(userId);
+        passwordResetTokenRepository.deleteByUserId(userId);
+        paymentRepository.deleteByUserId(userId);
+        bookReviewRepository.deleteByUserId(userId);
+        reservationRepository.deleteByUserId(userId);
+        bookLoanRepository.deleteByUserId(userId);
+        subscriptionRepository.deleteByUserId(userId);
+
+        userRepository.delete(user);
     }
 }

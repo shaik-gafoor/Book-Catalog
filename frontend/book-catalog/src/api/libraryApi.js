@@ -6,6 +6,22 @@ const USER_KEY = "bookCatalogUser";
 const SESSION_STARTED_AT_KEY = "bookCatalogSessionStartedAt";
 const NOTIFICATION_STATE_KEY = "bookCatalogNotificationState";
 const LOCAL_BOOKS_KEY = "bookCatalogLocalBooks";
+const ADMIN_EMAIL = "admin@gmail.com";
+
+const normalizeAuthUser = (user) => {
+  if (!user || typeof user !== "object") return null;
+
+  const email = String(user.email || "")
+    .trim()
+    .toLowerCase();
+  const normalizedRole = email === ADMIN_EMAIL ? "ROLE_ADMIN" : "ROLE_USER";
+
+  return {
+    ...user,
+    email: user.email,
+    role: normalizedRole,
+  };
+};
 
 export const updateProfile = (payload) =>
   request("/api/users/profile", { method: "PUT", body: payload });
@@ -601,7 +617,8 @@ export const getAuthToken = () => localStorage.getItem(TOKEN_KEY);
 
 export const setAuthSession = (token, user) => {
   if (token) localStorage.setItem(TOKEN_KEY, token);
-  if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+  if (user)
+    localStorage.setItem(USER_KEY, JSON.stringify(normalizeAuthUser(user)));
   localStorage.setItem(SESSION_STARTED_AT_KEY, String(Date.now()));
   localStorage.removeItem(NOTIFICATION_STATE_KEY);
 };
@@ -617,11 +634,17 @@ export const getAuthUser = () => {
   const stored = localStorage.getItem(USER_KEY);
   if (!stored) return null;
   try {
-    return JSON.parse(stored);
+    return normalizeAuthUser(JSON.parse(stored));
   } catch {
     return null;
   }
 };
+
+export const isAdminUser = (user) =>
+  String(user?.email || "")
+    .trim()
+    .toLowerCase() === ADMIN_EMAIL &&
+  String(user?.role || "").toUpperCase() === "ROLE_ADMIN";
 
 export const getAuthSessionStartedAt = () => {
   const value = localStorage.getItem(SESSION_STARTED_AT_KEY);
@@ -926,6 +949,8 @@ export const deleteSubscriptionPlan = (id) =>
   request(`/api/subscription-plans/admin/${id}`, { method: "DELETE" });
 
 export const getUsers = () => request("/api/users/list");
+export const deleteUser = (userId) =>
+  request(`/api/users/${userId}`, { method: "DELETE" });
 export const getProfile = () => request("/api/users/profile").catch(() => null);
 
 export const addToWishlist = (bookId, notes) =>

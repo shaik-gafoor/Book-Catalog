@@ -32,6 +32,7 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/books/**").hasRole("ADMIN")
                         .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/books/**").hasRole("ADMIN")
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users/list").hasRole("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/catalog/**").permitAll()
                         .requestMatchers("/api/fines/waive").hasRole("ADMIN")
                         .requestMatchers("/api/fines").hasRole("ADMIN")

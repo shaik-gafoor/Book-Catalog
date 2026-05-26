@@ -8,6 +8,7 @@ import MyLoans from "./pages/MyLoans/MyLoans";
 import MyReservations from "./pages/MyReservations/Myreservations.jsx";
 import AuthPage from "./pages/Auth/AuthPage.jsx";
 import RequireAuth from "./pages/Auth/RequireAuth.jsx";
+import RequireAdmin from "./pages/Auth/RequireAdmin.jsx";
 import MyFines from "./pages/MyFines/MyFines.jsx";
 import SubscriptionPage from "./pages/Subscription/SubscriptionPage.jsx";
 import WishlistPage from "./pages/Wishlist/WishlistPage.jsx";
@@ -24,16 +25,18 @@ function App() {
         <Route element={<UserLayout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/books" element={<BookPage />} />
-          <Route path="/add-book" element={<AddBookPage />} />
           <Route path="/my-loans" element={<MyLoans />} />
           <Route path="/my-reservations" element={<MyReservations />} />
           <Route path="/my-fines" element={<MyFines />} />
           <Route path="/subscriptions" element={<SubscriptionPage />} />
           <Route path="/wishlist" element={<WishlistPage />} />
-          <Route path="/users" element={<UsersPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/admin" element={<AdminPage />} />
+          <Route element={<RequireAdmin />}>
+            <Route path="/add-book" element={<AddBookPage />} />
+            <Route path="/users" element={<UsersPage />} />
+            <Route path="/admin" element={<AdminPage />} />
+          </Route>
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

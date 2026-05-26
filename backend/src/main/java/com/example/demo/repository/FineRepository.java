@@ -28,4 +28,14 @@ public interface FineRepository extends JpaRepository<Fine, Long> {
 
     List<Fine> findByUserId(Long userId);
     List<Fine> findByUserIdAndType(Long userId, FineType type);
+
+    void deleteByUserId(Long userId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("update Fine f set f.waivedBy = null where f.waivedBy.id = :userId")
+    void clearWaivedByUser(@org.springframework.data.repository.query.Param("userId") Long userId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("update Fine f set f.processedBy = null where f.processedBy.id = :userId")
+    void clearProcessedByUser(@org.springframework.data.repository.query.Param("userId") Long userId);
 }

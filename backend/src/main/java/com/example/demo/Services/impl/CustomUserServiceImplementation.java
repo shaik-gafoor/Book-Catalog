@@ -33,7 +33,7 @@ public class CustomUserServiceImplementation implements UserDetailsService {
         if(user == null){
             throw new UsernameNotFoundException("User not exist with username:" + username);
         }
-        GrantedAuthority authority = new SimpleGrantedAuthority(user.getRole().toString());
+        GrantedAuthority authority = new SimpleGrantedAuthority(resolveRole(user));
 
         Collection<? extends GrantedAuthority> authorities = Collections.singletonList(authority);
         return new org.springframework.security.core.userdetails.User(
@@ -41,5 +41,13 @@ public class CustomUserServiceImplementation implements UserDetailsService {
                 user.getPassword(),
                 authorities
         );
+    }
+
+    private String resolveRole(User user) {
+        String email = user.getEmail();
+        if (email != null && email.equalsIgnoreCase("admin@gmail.com")) {
+            return "ROLE_ADMIN";
+        }
+        return "ROLE_USER";
     }
 }

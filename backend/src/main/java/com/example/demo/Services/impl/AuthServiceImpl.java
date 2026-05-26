@@ -66,6 +66,11 @@ public class AuthServiceImpl implements AuthService {
         if (user == null) {
             throw new UserException("user not found with username - " + loginValue);
         }
+        String resolvedRole = resolveRole(user);
+        if (!resolvedRole.equals(user.getRole())) {
+            user.setRole(resolvedRole);
+            user = userRepository.save(user);
+        }
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
@@ -76,6 +81,14 @@ public class AuthServiceImpl implements AuthService {
         response.setUser(UserMapper.toDTO(user));
 
         return response;
+    }
+
+    private String resolveRole(User user) {
+        String email = normalizeEmail(user.getEmail());
+        if (email != null && email.equalsIgnoreCase("admin@gmail.com")) {
+            return String.valueOf(UserRole.ROLE_ADMIN);
+        }
+        return String.valueOf(UserRole.ROLE_USER);
     }
 
     private Authentication authenticate(String username, String password) throws UserException {
